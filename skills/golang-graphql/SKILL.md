@@ -227,8 +227,10 @@ func (r *subscriptionResolver) MessageAdded(ctx context.Context, room string) (<
 Production GraphQL servers require explicit limits. Without them, a single deeply nested query exhausts CPU and memory.
 
 ```go
-// gqlgen — wire these into every production handler
-srv := handler.NewDefaultServer(es)
+// gqlgen — handler.New, not the deprecated NewDefaultServer: the latter
+// registers Introspection unconditionally, so the gate below would be a no-op
+srv := handler.New(es)
+srv.AddTransport(transport.POST{})
 srv.Use(extension.FixedComplexityLimit(200)) // max cost per query
 
 // Gate introspection — only in non-production environments
@@ -236,6 +238,8 @@ if os.Getenv("ENV") != "production" {
     srv.Use(extension.Introspection{})
 }
 ```
+
+Full transport, query-cache and APQ setup: [Production Handler Setup](references/gqlgen.md#production-handler-setup).
 
 For graph-gophers: `graphql.MaxDepth(10)` and `graphql.MaxParallelism(10)` options at `ParseSchema` time.
 

@@ -68,21 +68,28 @@ type Server struct {
     maxConns     int
 }
 
-type Option func(*Server)
+// Option returns an error so invalid config fails at construction, not at runtime
+type Option func(*Server) error
 
 func WithReadTimeout(d time.Duration) Option {
-    return func(s *Server) { s.readTimeout = d }
+    return func(s *Server) error { s.readTimeout = d; return nil }
 }
 
 func WithWriteTimeout(d time.Duration) Option {
-    return func(s *Server) { s.writeTimeout = d }
+    return func(s *Server) error { s.writeTimeout = d; return nil }
 }
 
 func WithMaxConns(n int) Option {
-    return func(s *Server) { s.maxConns = n }
+    return func(s *Server) error {
+        if n <= 0 {
+            return fmt.Errorf("max conns must be positive, got %d", n)
+        }
+        s.maxConns = n
+        return nil
+    }
 }
 
-func NewServer(addr string, opts ...Option) *Server {
+func NewServer(addr string, opts ...Option) (*Server, error) {
     // Default options
     s := &Server{
         addr:         addr,
@@ -91,13 +98,15 @@ func NewServer(addr string, opts ...Option) *Server {
         maxConns:     100,
     }
     for _, opt := range opts {
-        opt(s)
+        if err := opt(s); err != nil {
+            return nil, err
+        }
     }
-    return s
+    return s, nil
 }
 
 // Usage
-srv := NewServer(":8080",
+srv, err := NewServer(":8080",
     WithReadTimeout(30*time.Second),
     WithMaxConns(500),
 )

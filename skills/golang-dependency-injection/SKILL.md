@@ -207,17 +207,13 @@ Container cloning creates an isolated copy where you override only the services 
 
 ```go
 func TestUserService_WithDo(t *testing.T) {
-    // Create a test injector with mock implementation
-    testInjector := do.New()
+    // Clone the app container — built by the same wiring as main() — so the
+    // test gets an isolated copy of every real service registration
+    testInjector := newAppInjector().Clone()
 
-    // Provide the mock UserStore interface
+    // Override only the boundary to mock; everything else stays real
     do.OverrideValue[UserStore](testInjector, &MockUserStore{
         users: map[string]*User{"1": {ID: "1", Name: "Alice"}},
-    })
-
-    // Provide other real services as needed
-    do.Provide[*slog.Logger](testInjector, func(i *do.Injector) (*slog.Logger, error) {
-        return slog.Default(), nil
     })
 
     svc := do.MustInvoke[*UserService](testInjector)

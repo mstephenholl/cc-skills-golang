@@ -1,6 +1,6 @@
 ---
 name: golang-data-structures
-description: "Golang data structures — slices (internals, capacity growth, preallocation, slices package), maps (internals, hash buckets, maps package), arrays, container/list/heap/ring, strings.Builder vs bytes.Buffer, generic collections, pointers (unsafe.Pointer, weak.Pointer), and copy semantics. Use when choosing or optimizing Go data structures, implementing generic containers, using container/ packages, unsafe or weak pointers, or questioning slice/map internals. Not for applying optimization patterns once profiling has identified a bottleneck (→ See `samber/cc-skills-golang@golang-performance` skill)."
+description: "Golang data structures — slices (internals, capacity growth, preallocation, slices package), maps (Swiss-table internals, maps package), arrays, container/list/heap/ring, strings.Builder vs bytes.Buffer, generic collections, pointers (unsafe.Pointer, weak.Pointer), and copy semantics. Use when choosing or optimizing Go data structures, implementing generic containers, using container/ packages, unsafe or weak pointers, or questioning slice/map internals. Not for applying optimization patterns once profiling has identified a bottleneck (→ See `samber/cc-skills-golang@golang-performance` skill)."
 user-invocable: true
 license: MIT
 compatibility: Designed for Claude Code, Codex or similar harness, and for projects using Golang.
@@ -71,7 +71,7 @@ Key functions: `Sort`/`SortFunc`, `BinarySearch`, `Contains`, `Compact`, `Grow`.
 
 ## Map Internals
 
-Maps are hash tables with 8-entry buckets and overflow chains. They are reference types — assigning a map copies the pointer, not the data.
+Since Go 1.24, maps are Swiss tables — 8-slot groups probed through a control word of hash fragments, with no overflow chains. They are reference types — assigning a map copies the pointer, not the data.
 
 ### Preallocation
 
@@ -90,7 +90,7 @@ m := make(map[string]*User, len(users)) // avoids rehashing during population
 
 For `Clone`, `Equal`, sorted iteration → see `samber/cc-skills-golang@golang-safety` skill.
 
-**[Map Internals Deep Dive](./references/map-internals.md)** — How Go maps store and hash data, bucket overflow chains, why maps never shrink (and what to do about it), comparing map performance to alternatives.
+**[Map Internals Deep Dive](./references/map-internals.md)** — read when reasoning about map memory or growth: Swiss-table layout, load factor, why maps never shrink (and what to do about it), pointer vs value elements.
 
 ## Arrays
 

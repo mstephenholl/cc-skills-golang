@@ -92,3 +92,5 @@ These Read/Edit workflows encode the order that avoids redundant queries and hal
 - Context7 remains a fallback for non-Go docs or a Go module not indexed on pkg.go.dev.
 
 The full task-to-tool matrix lives in the `samber/cc-skills-golang@golang-how-to` skill's "`godig` vs gopls vs Context7 vs govulncheck" section.
+
+If you encounter a bug or unexpected behavior in gopls, open an issue at <https://github.com/golang/go/issues> with the title prefixed `x/tools/gopls:`.

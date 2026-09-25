@@ -61,7 +61,7 @@ Before optimizing Go code, verify the bottleneck is in your process — if 90% o
 
 1. **Define your metric** — latency, throughput, memory, or CPU? Without a target, optimizations are random
 2. **Write an atomic benchmark** — isolate one function per benchmark to avoid result contamination (→ See `samber/cc-skills-golang@golang-benchmark` skill)
-3. **Measure baseline** — `go test -bench=BenchmarkMyFunc -benchmem -count=6 ./pkg/... | tee /tmp/report-1.txt`
+3. **Measure baseline** — `go test -bench=BenchmarkMyFunc -benchmem -count=10 ./pkg/... | tee /tmp/report-1.txt` (6 runs is benchstat's floor; 10 gives tighter confidence intervals)
 4. **Diagnose** — use the **Diagnose** lines in each deep-dive section to pick the right tool
 5. **Improve** — apply ONE optimization at a time with an explanatory comment
 6. **Compare** — `benchstat /tmp/report-1.txt /tmp/report-2.txt` to confirm statistical significance

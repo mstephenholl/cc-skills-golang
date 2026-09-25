@@ -108,7 +108,7 @@ Pick by task:
 | See who imports a package across the whole public ecosystem | `godig` | `godig imported-by` |
 | Search for a package or library candidate | `godig` | `godig search` |
 | Check a package's or module's license | `godig` | `godig package licenses` / `module licenses` |
-| Get docs for a non-Go library, or a Go module not indexed on pkg.go.dev | Context7 | `resolve-library-id` / `query-docs` |
+| Get docs for a non-Go library, or a Go module not indexed on pkg.go.dev | Context7 | library docs lookup (resolve the library, then query its docs) |
 
 See the `samber/cc-skills-golang@golang-pkg-go-dev` skill for the full `godig` command reference, and the `samber/cc-skills-golang@golang-security` skill for the whole-tree `govulncheck` remediation workflow.
 

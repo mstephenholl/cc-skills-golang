@@ -234,3 +234,5 @@ For testing patterns (cloning, overrides, mocks), see [Testing](./references/tes
 - → See `samber/cc-skills-golang@golang-dependency-injection` skill for DI concepts, comparison, and when to adopt a DI library
 - → See `samber/cc-skills-golang@golang-structs-interfaces` skill for interface design patterns
 - → See `samber/cc-skills-golang@golang-testing` skill for general testing patterns
+
+If you encounter a bug or unexpected behavior in samber/do, open an issue at <https://github.com/samber/do/issues>.

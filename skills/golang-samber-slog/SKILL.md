@@ -201,7 +201,7 @@ For configuration examples and shutdown patterns, see [Backend Handlers](referen
 | Mistake | Why it fails | Fix |
 | --- | --- | --- |
 | Sampling after formatting | Wastes CPU formatting records that get dropped | Place sampling as outermost handler |
-| Fanout to many synchronous handlers | Blocks caller — latency is sum of all handlers | Use `Pool()` for concurrent dispatch |
+| Fanout to many synchronous handlers | Blocks caller — latency is sum of all handlers | Keep network sinks in batch/async mode and `Router()` each sink only the records it needs — not `Pool()`, which sends each record to ONE handler and silently drops it from the others |
 | Missing shutdown flush on batch handlers | Buffered logs lost on shutdown | `defer handler.Stop(ctx)` (Datadog), `defer lokiClient.Stop()` (Loki), `defer writer.Close()` (Kafka) |
 | Router without default/catch-all handler | Unmatched records silently dropped | Add a handler with no predicate as catch-all |
 | `AttrFromContext` without HTTP middleware | Context has no request attributes to extract | Install `slog-gin`/`echo`/`fiber`/`chi` middleware first |
@@ -209,7 +209,7 @@ For configuration examples and shutdown patterns, see [Backend Handlers](referen
 
 ## Performance Warnings
 
-- **Fanout latency** = sum of all handler latencies (sequential). With 5 handlers at 10ms each, every log call costs 50ms. Use `Pool()` to reduce to max(latencies)
+- **Fanout latency** = sum of all handler latencies (sequential). With 5 handlers at 10ms each, every log call costs 50ms. Batch or async the slow sinks rather than reaching for `Pool()`, which load-balances — each record reaches only one handler
 - **Pipe middleware** adds per-record function call overhead — keep chains short (2-4 middlewares)
 - **slog-formatter** processes attributes sequentially — many formatters compound. For hot-path attribute formatting, prefer implementing `slog.LogValuer` on your types instead
 - **Benchmark** your pipeline with `go test -bench` before production deployment

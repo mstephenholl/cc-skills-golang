@@ -150,9 +150,10 @@ func (s *UserService) CreateOrder(ctx context.Context, req CreateOrderRequest) e
         return builder.
             Code("insufficient_stock").
             Public("Not enough items in stock.").
+            With("product_id", req.ProductID).
             With("requested", req.Quantity).
             With("available", product.Stock).
-            Errorf("insufficient stock for product %s", req.ProductID)
+            Errorf("insufficient stock")
     }
 
     return nil
@@ -224,10 +225,10 @@ func ProcessData(data string) (err error) {
 
 ## Accessing error information
 
-`samber/oops` errors implement the standard `error` interface. Access additional info:
+`samber/oops` errors implement the standard `error` interface. Access additional info with `oops.AsOops` — it unwraps like `errors.As`, whereas a bare `err.(oops.OopsError)` assertion misses an oops error wrapped by `fmt.Errorf("…: %w", err)`:
 
 ```go
-if oopsErr, ok := err.(oops.OopsError); ok {
+if oopsErr, ok := oops.AsOops(err); ok {
     fmt.Println("Code:", oopsErr.Code())
     fmt.Println("Domain:", oopsErr.Domain())
     fmt.Println("Tags:", oopsErr.Tags())
@@ -280,3 +281,5 @@ For assertions, configuration, and additional logger examples, see [Advanced pat
 
 - → See `samber/cc-skills-golang@golang-error-handling` skill for general error handling patterns
 - → See `samber/cc-skills-golang@golang-observability` skill for logger integration and structured logging
+
+If you encounter a bug or unexpected behavior in samber/oops, open an issue at <https://github.com/samber/oops/issues>.

@@ -199,3 +199,5 @@ Use `testifylint` to catch wrong argument order, assert/require misuse, and more
 
 - → See `samber/cc-skills-golang@golang-testing` skill for general test patterns, table-driven tests, and CI
 - → See `samber/cc-skills-golang@golang-lint` skill for testifylint configuration
+
+If you encounter a bug or unexpected behavior in stretchr/testify, open an issue at <https://github.com/stretchr/testify/issues>.
