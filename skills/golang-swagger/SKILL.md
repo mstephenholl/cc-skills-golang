@@ -6,7 +6,7 @@ license: MIT
 compatibility: Designed for Claude Code, Codex or similar harness. Requires go and swag CLI.
 metadata:
   author: samber
-  version: "1.1.3"
+  version: "1.1.4"
   openclaw:
     emoji: "📋"
     homepage: https://github.com/samber/cc-skills-golang
@@ -28,8 +28,8 @@ paths:
 
 **Modes:**
 
-- **Build** — adding Swagger to a new or existing Go project: set up the toolchain, annotate handlers, generate docs, wire the UI endpoint.
-- **Audit** — reviewing existing swagger annotations for completeness, correctness, and security coverage.
+- **Build** — adding Swagger to a new or existing Go project. Done when `swag init` succeeds and `/swagger/index.html` lists every routed handler.
+- **Audit** — done when every routed handler has `@Router`, `@Success` and `@Failure`, protected routes have `@Security`, and `swag init` regenerates `docs/` with no diff. Deliver ranked findings with file:line; if the user asked for fixes, apply them and re-run `swag init`.
 
 **Dependencies:**
 
@@ -37,52 +37,19 @@ paths:
 
 ## Setup
 
-Three steps to get Swagger UI running:
-
 ```bash
 swag init                        # generates docs/ with docs.go, swagger.json, swagger.yaml
 swag init -g cmd/api/main.go     # if general info is not in main.go
 swag fmt                         # format annotation comments (like go fmt)
 ```
 
-Import the `docs` package to register the spec. Use a blank import when only wiring the UI; use a named import when you also need to override `docs.SwaggerInfo` at runtime:
+Import the generated `docs` package to register the spec — blank (`_ "yourmodule/docs"`) when only serving the UI, named (`docs "yourmodule/docs"`) when overriding `docs.SwaggerInfo` at runtime. Then mount the UI, e.g. for Gin (`gin-swagger` + `swaggo/files`), and open `/swagger/index.html`:
 
 ```go
-import _ "yourmodule/docs"          // blank: registers spec, no identifier
-import docs "yourmodule/docs"       // named: use when overriding SwaggerInfo
-```
-
-Wire the UI endpoint — pick your framework:
-
-```go
-// Gin
 r.GET("/swagger/*any", ginSwagger.WrapHandler(swaggerFiles.Handler))
-
-// Echo
-e.GET("/swagger/*", echoSwagger.WrapHandler)
-
-// Fiber
-app.Get("/swagger/*", fiberSwagger.WrapHandler(swaggerFiles.Handler))
-
-// net/http
-mux.Handle("/swagger/", httpSwagger.Handler(swaggerFiles.Handler))
-
-// Chi
-r.Get("/swagger/*", httpSwagger.Handler(swaggerFiles.Handler))
 ```
 
-Access the UI at `/swagger/index.html`.
-
-For dynamic host/basepath (multi-environment), use a named import and override before serving:
-
-```go
-import docs "yourmodule/docs"
-
-docs.SwaggerInfo.Host     = os.Getenv("API_HOST")
-docs.SwaggerInfo.BasePath = "/api/v1"
-```
-
-[Full CLI reference](references/swag-cli.md)
+Read [swag-cli.md](references/swag-cli.md) for other framework adapters (Echo, Fiber, Chi, net/http — each wires differently), a host or base path set per environment, generic or envelope response types (`api.Response[model.User]`, `api.Envelope{data=model.User}`), response headers, MIME aliases, and `swag init` flags such as `--tags '!Internal'`.
 
 ## General API Info
 
@@ -148,10 +115,6 @@ Optional attributes on `@Param`: `default(v)`, `minimum(n)`, `maximum(n)`, `minL
 | `{array}`            | Slice of structs |
 | `string` / `integer` | Primitive        |
 
-**Generics** (swag v2): `@Success 200 {object} api.Response[model.User]`
-
-**Nested composition**: `@Success 200 {object} api.Response{data=model.User}`
-
 ## Security Definitions
 
 Define once at the API level (in main.go), apply per endpoint with `@Security`.
@@ -214,11 +177,11 @@ type CreateUserRequest struct {
 | --- | --- | --- |
 | Missing `_ "yourmodule/docs"` import | Schema not registered; UI loads empty | Add blank import in main.go or server init |
 | Stale `docs/` after code changes | Docs diverge from implementation; consumers get wrong schema | Re-run `swag init` after every annotation change |
-| `@Param body` with primitive type | swag cannot derive schema from `string`; generation fails | Always use a named struct for body params |
+| Model type from a dependency (`uuid.UUID`, `sql.NullString`, `gorm.Model`) | swag parses only the `-d` directories, so `swag init` fails with `cannot find type definition` | Add `--parseDependency`, or override the field with `swaggertype` |
 | No `@Security` on protected routes | Swagger UI shows no lock icon; testers send unauthenticated requests | Apply `@Security` to every authenticated endpoint |
 | General info annotations in the wrong file | swag silently skips them; spec has no title/host | Use `-g <file>` flag or move annotations to `main.go` |
-| Using `{object}` with a map type | swag cannot generate a schema for `map[string]any` without help | Use a named struct or annotate with `swaggertype` |
-| Multi-word `@Tags` without quotes | Tags split on spaces, producing malformed grouping | Quote tags with spaces: `@Tags "user accounts"` |
+| Raw map in `@Success` (`{object} map[string]any`) | Generates, but as an anonymous `additionalProperties` object that documents nothing | Use a named struct when keys are known, a named map type (`type FeatureFlags map[string]bool`) when they are dynamic |
+| Quoting `@Tags` or separating them with spaces | `@Tags` splits on commas only — quotes become part of the tag name, and `@Tags users admin` is one tag named "users admin" | `@Tags users,admin` |
 
 ## Cross-References
 

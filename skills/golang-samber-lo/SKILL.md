@@ -6,7 +6,7 @@ license: MIT
 compatibility: Designed for Claude Code, Codex or similar harness, and for projects using Golang.
 metadata:
   author: samber
-  version: "1.2.3"
+  version: "1.2.4"
   openclaw:
     emoji: "🧰"
     homepage: https://github.com/samber/cc-skills-golang
@@ -24,7 +24,7 @@ paths:
 
 # samber/lo — Functional Utilities for Go
 
-Lodash-inspired, generics-first utility library with 500+ type-safe helpers for slices, maps, strings, math, channels, tuples, and concurrency. Zero external dependencies. Immutable by default.
+Generics-first helpers for slices, maps, strings, channels and tuples; the core `lo` package never mutates its input. The library is v1 with strict semver — only `exp/` packages may break, there is no v2, so install with `go get github.com/samber/lo@v1`. Its one non-stdlib dependency is the Go project's `golang.org/x/text`, used only by `lo.Capitalize`; every other helper runs on the standard library alone.
 
 **Official Resources:**
 
@@ -38,152 +38,52 @@ This skill is not exhaustive — refer to library documentation and code example
 - To navigate this library's usage in your own code (definitions, call sites, diagnostics), → See `samber/cc-skills-golang@golang-gopls` skill (`gopls`).
 - Context7 remains a fallback for docs not indexed on pkg.go.dev.
 
-## Why samber/lo
+## Choose the Package
 
-Go's stdlib `slices` and `maps` packages cover ~10 basic helpers (sort, contains, keys). Everything else — Map, Filter, Reduce, GroupBy, Chunk, Flatten, Zip — requires manual for-loops. `lo` fills this gap:
+Start with `lo`; move a call site to another package only when a profile or a lazy-evaluation need justifies it.
 
-- **Type-safe generics** — no `interface{}` casts, no reflection, compile-time checking, no interface boxing overhead
-- **Immutable by default** — returns new collections, safe for concurrent reads, easier to reason about
-- **Composable** — functions take and return slices/maps, so they chain without wrapper types
-- **Zero dependencies** — only Go stdlib, no transitive dependency risk
-- **Progressive complexity** — start with `lo`, upgrade to `lop`/`lom`/`loi` only when profiling demands it
-- **Error variants** — most functions have `Err` suffixes (`MapErr`, `FilterErr`, `ReduceErr`) that stop on first error
+| Alias | Import | Go | Use when | Cost |
+| --- | --- | --- | --- | --- |
+| `lo` | `github.com/samber/lo` | 1.18+ | Default for every transform | Allocates a new slice/map per call |
+| `lop` | `github.com/samber/lo/parallel` | 1.18+ | Expensive per-item CPU work (parsing, hashing, image ops), or ~1000+ items | One goroutine per element, no limit, no context, no error return |
+| `lom` | `github.com/samber/lo/mutable` | 1.18+ | Hot path where `pprof -alloc_objects` blames `lo.Filter`/`lo.Map` | Mutates the input; unsafe while other goroutines read it |
+| `loi` | `github.com/samber/lo/it` | 1.23+ | 3+ chained transforms on large data, or only the first N results needed | Lazy `iter.Seq` pipelines built on range-over-func |
+| `simd` | `github.com/samber/lo/exp/simd` | see its `go.mod` | Numeric bulk ops (Sum, Mean, Min, Max, Contains) after a benchmark | Experimental, outside semver |
 
-## Installation
+- **`lop` is CPU parallelism, not I/O concurrency** — it has no concurrency limit, no context cancellation and no error path, so for HTTP or database fan-out use `errgroup` with `SetLimit` and a context.
+- **`lom` only after the profiler says so** — in-place mutation trades away the immutability callers rely on, so measure allocation pressure first and keep it off slices shared across goroutines.
+- **`loi` removes intermediate slices** — `Filter → Map → Take` runs as one lazy pass; below Go 1.23, compose `lo` calls or write a single loop instead.
+- **`exp/simd` needs `GOEXPERIMENT=simd` and publishes only pseudo-versions** — pin the exact version and benchmark against plain `lo`, since without hardware support it falls back to the scalar `lo` functions.
+- **Infinite or event-driven streams belong to `samber/ro`** — `lo` transforms finite collections (→ See `samber/cc-skills-golang@golang-samber-ro` skill).
 
-```bash
-go get github.com/samber/lo
-```
+**Diagnose:** 1- `go tool pprof -alloc_objects` — confirm `lo.*` calls top the allocation profile before moving them to `lom` 2- `go tool pprof` on a CPU profile — confirm the transform callback dominates before moving to `lop`
 
-| Package | Import | Alias | Go version |
-| --- | --- | --- | --- |
-| Core (immutable) | `github.com/samber/lo` | `lo` | 1.18+ |
-| Parallel | `github.com/samber/lo/parallel` | `lop` | 1.18+ |
-| Mutable | `github.com/samber/lo/mutable` | `lom` | 1.18+ |
-| Iterator | `github.com/samber/lo/it` | `loi` | 1.23+ |
-| SIMD (experimental) | `github.com/samber/lo/exp/simd` | — | 1.25+ (amd64 only) |
+Read [references/package-guide.md](references/package-guide.md) when switching a call site to `lop`, `lom`, `loi` or `simd`.
 
-## Choose the Right Package
+## Rules
 
-Start with `lo`. Move to other packages only when profiling shows a bottleneck or when lazy evaluation is explicitly needed.
-
-| Package | Use when | Trade-off |
-| --- | --- | --- |
-| `lo` | Default for all transforms | Allocates new collections (safe, predictable) |
-| `lop` | CPU-bound work on large datasets (1000+ items) | Goroutine overhead; not for I/O or small slices |
-| `lom` | Hot path confirmed by `pprof -alloc_objects` | Mutates input — caller must understand side effects |
-| `loi` | Large datasets with chained transforms (Go 1.23+) | Lazy evaluation saves memory but adds iterator complexity |
-| `simd` | Numeric bulk ops after benchmarking (experimental) | Unstable API, may break between versions |
-
-**Key rules:**
-
-- `lop` is for CPU parallelism, not I/O concurrency — for I/O fan-out, use `errgroup` instead
-- `lom` breaks immutability — only use when allocation pressure is measured, never assumed
-- `loi` eliminates intermediate allocations in chains like `Map → Filter → Take` by evaluating lazily
-- For reactive/streaming pipelines over infinite event streams, → see `samber/cc-skills-golang@golang-samber-ro` skill + `samber/ro` package
-
-For detailed package comparison and decision flowchart, see [Package Guide](./references/package-guide.md).
-
-## Core Patterns
-
-### Transform a slice
-
-```go
-// ✓ lo — declarative, type-safe
-names := lo.Map(users, func(u User, _ int) string {
-    return u.Name
-})
-
-// ✗ Manual — boilerplate, error-prone
-names := make([]string, 0, len(users))
-for _, u := range users {
-    names = append(names, u.Name)
-}
-```
-
-### Filter + Reduce
-
-```go
-total := lo.Reduce(
-    lo.Filter(orders, func(o Order, _ int) bool {
-        return o.Status == "paid"
-    }),
-    func(sum float64, o Order, _ int) float64 {
-        return sum + o.Amount
-    },
-    0,
-)
-```
-
-### GroupBy
-
-```go
-byStatus := lo.GroupBy(tasks, func(t Task, _ int) string {
-    return t.Status
-})
-// map[string][]Task{"open": [...], "closed": [...]}
-```
-
-### Error variant — stop on first error
-
-```go
-results, err := lo.MapErr(urls, func(url string, _ int) (Response, error) {
-    return http.Get(url)
-})
-```
+- **Prefer the stdlib when it covers the operation** — `slices.Contains` and `slices.Sort` (Go 1.21+) and `slices.Collect(maps.Keys(m))` (Go 1.23+; `maps.Keys` returns an iterator, not a slice) need no third-party call. Use `lo` for what the stdlib lacks: Map, Filter, Reduce, GroupBy, Chunk, Flatten and the error variants.
+- **Pick the error variant by failure policy** — `MapErr`, `FilterErr`, `ReduceErr` and the other `…Err` helpers stop at the first error and return `(result, error)`; to keep the successes and drop the failures in one pass, return `(value, ok)` from `lo.FilterMap`.
+- **Keep `lo.Must` to tests and startup** — a panic is the right failure for a missing config in `main`, but in a request handler a malformed body then panics instead of returning a 400.
 
 ## Common Mistakes
 
 | Mistake | Why it fails | Fix |
 | --- | --- | --- |
-| Using `lo.Contains` when `slices.Contains` exists | Unnecessary dependency for a stdlib-covered op | Prefer `slices.Contains`/`slices.Sort` since Go 1.21+ and `slices.Collect(maps.Keys(m))` since Go 1.23+ when a key slice is needed |
-| Using `lop.Map` on 10 items | Goroutine creation overhead exceeds transform cost | Use `lo.Map` — `lop` benefits start at ~1000+ items for CPU-bound work |
-| Assuming `lo.Filter` modifies the input | `lo` is immutable by default — it returns a new slice | Use `lom.Filter` if you explicitly need in-place mutation |
-| Using `lo.Must` in production code paths | `Must` panics on error — fine in tests and init, dangerous in request handlers | Use the non-Must variant and handle the error |
-| Chaining many eager transforms on large data | Each step allocates an intermediate slice | Use `loi` (lazy iterators) to avoid intermediate allocations |
+| Discarding `lo.Filter`'s return value | `lo` returns a new slice; the input is untouched | Assign the result, or use `lom.Filter` when in-place mutation is intended |
+| `lop.Map` over 50 cheap items | Goroutine setup costs more than the transform | `lo.Map`; keep `lop` for expensive per-item CPU work |
+| `lo.Ternary(cond, expensive(), cheap)` | Go evaluates both arguments before the call, so `expensive()` always runs | `lo.TernaryF` with closures, or a plain `if` |
+| Chaining eager transforms over large data | Each step allocates an intermediate slice | `loi` on Go 1.23+ |
 
-## Best Practices
+## References
 
-1. **Prefer stdlib when available** — `slices.Contains` and `slices.Sort` (Go 1.21+) carry no dependency; `maps.Keys` is Go 1.23+ and returns an iterator, so use `slices.Collect(maps.Keys(m))` when you need a slice. Use `lo` for transforms the stdlib doesn't offer (Map, Filter, Reduce, GroupBy, Chunk, Flatten)
-2. **Compose lo functions** — chain `lo.Filter` → `lo.Map` → `lo.GroupBy` instead of writing nested loops. Each function is a building block
-3. **Profile before optimizing** — switch from `lo` to `lom`/`lop` only after `go tool pprof` confirms allocation or CPU as the bottleneck
-4. **Use error variants** — prefer `lo.MapErr` over `lo.Map` + manual error collection. Error variants stop early and propagate cleanly
-5. **Use `lo.Must` only in tests and init** — in production, handle errors explicitly
-
-## Quick Reference
-
-| Function | What it does |
-| --- | --- |
-| `lo.Map` | Transform each element |
-| `lo.Filter` / `lo.Reject` | Keep / remove elements matching predicate |
-| `lo.Reduce` | Fold elements into a single value |
-| `lo.ForEach` | Side-effect iteration |
-| `lo.GroupBy` | Group elements by key |
-| `lo.Chunk` | Split into fixed-size batches |
-| `lo.Flatten` | Flatten nested slices one level |
-| `lo.Uniq` / `lo.UniqBy` | Remove duplicates |
-| `lo.Find` / `lo.FindOrElse` | First match or default |
-| `lo.Contains` / `lo.Every` / `lo.Some` | Membership tests |
-| `lo.Keys` / `lo.Values` | Extract map keys or values |
-| `lo.PickBy` / `lo.OmitBy` | Filter map entries |
-| `lo.Zip2` / `lo.Unzip2` | Pair/unpair two slices |
-| `lo.Range` / `lo.RangeFrom` | Generate number sequences |
-| `lo.Ternary` / `lo.If` | Inline conditionals |
-| `lo.ToPtr` / `lo.FromPtr` | Pointer helpers |
-| `lo.Must` / `lo.Try` | Panic-on-error / recover-as-bool |
-| `lo.Async` / `lo.Attempt` | Async execution / retry with backoff |
-| `lo.Debounce` / `lo.Throttle` | Rate limiting |
-| `lo.ChannelDispatcher` | Fan-out to multiple channels |
-
-For the complete function catalog (300+ functions), see [API Reference](./references/api-reference.md).
-
-For composition patterns, stdlib interop, and iterator pipelines, see [Advanced Patterns](./references/advanced-patterns.md).
+- [references/api-reference.md](references/api-reference.md) — when looking up a helper by domain (maps, strings, tuples, channels, retry, conditionals, pointers) or checking its signature.
+- [references/advanced-patterns.md](references/advanced-patterns.md) — when composing multi-step transforms, building lookup maps from slices, combining `lo` with `samber/mo`, or writing `loi` pipelines.
 
 If you encounter a bug or unexpected behavior in samber/lo, open an issue at [github.com/samber/lo/issues](https://github.com/samber/lo/issues).
 
 ## Cross-References
 
-- → See `samber/cc-skills-golang@golang-samber-ro` skill for reactive/streaming pipelines over infinite event streams (`samber/ro` package)
 - → See `samber/cc-skills-golang@golang-samber-mo` skill for monadic types (Option, Result, Either) that compose with lo transforms
 - → See `samber/cc-skills-golang@golang-data-structures` skill for choosing the right underlying data structure
 - → See `samber/cc-skills-golang@golang-performance` skill for profiling methodology before switching to `lom`/`lop`

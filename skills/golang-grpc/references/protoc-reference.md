@@ -77,7 +77,8 @@ protoc --go_out=gen --go_opt=paths=source_relative \
        --go-grpc_out=gen --go-grpc_opt=paths=source_relative \
        proto/user/v1/*.proto
 
-# With validation (using buf-validate)
+# With protoc-gen-validate (legacy, maintenance mode) — new projects use
+# protovalidate, which validates at runtime and needs no codegen plugin
 protoc --go_out=gen --go_opt=paths=source_relative \
        --go-grpc_out=gen --go-grpc_opt=paths=source_relative \
        --validate_out="lang=go:gen" \

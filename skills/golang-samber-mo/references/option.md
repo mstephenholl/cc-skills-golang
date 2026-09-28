@@ -23,7 +23,7 @@
 | --- | --- |
 | `mo.Some[T](value T)` | Creates Option with a present value |
 | `mo.None[T]()` | Creates Option with an absent value |
-| `mo.TupleToOption[T](value T, ok bool)` | Converts (value, bool) tuple — Some if ok is true, None otherwise |
+| `mo.TupleToOption[T](value T, ok bool)` | Converts (value, bool) tuple — Some if ok is true, None otherwise. For a map lookup, assign first: `v, ok := m[key]` — `mo.TupleToOption(m[key])` does not compile, because a map index inside a call argument yields a single value |
 | `mo.EmptyableToOption[T](value T)` | None if value equals its zero value, Some otherwise |
 | `mo.PointerToOption[T](value *T)` | None if pointer is nil, Some(\*value) otherwise |
 
@@ -134,7 +134,7 @@ Option implements multiple encoding interfaces:
 
 | Interface | Behavior |
 | --- | --- |
-| `json.Marshaler` / `json.Unmarshaler` | Some(42) -> `42`, None -> `null` |
+| `json.Marshaler` / `json.Unmarshaler` | Some(42) -> `42`, None -> `null` (`omitempty` does not omit it — see below) |
 | `encoding.TextMarshaler` / `TextUnmarshaler` | Text encoding/decoding |
 | `encoding.BinaryMarshaler` / `BinaryUnmarshaler` | Binary encoding/decoding |
 | `encoding/gob.GobEncoder` / `GobDecoder` | Gob encoding/decoding |
@@ -165,4 +165,4 @@ type Response struct {
 }
 ```
 
-`IsZero()` returns true when the Option is None, enabling the `omitzero` JSON tag.
+`IsZero()` returns true when the Option is None, enabling the `omitzero` JSON tag. `omitempty` has no effect on an Option field — it never treats a struct as empty — so without `omitzero` a None field marshals as `"extra": null`.

@@ -70,8 +70,8 @@ go tool cobra-cli init myapp
 go tool cobra-cli add serve
 go tool cobra-cli add migrate
 
-# Add with a parent other than root
-cobra-cli add list --parent serve
+# Add with a parent other than root — --parent takes the parent's Go variable name
+go tool cobra-cli add list --parent serveCmd
 ```
 
 Generated files follow the standard pattern:

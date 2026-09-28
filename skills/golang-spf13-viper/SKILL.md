@@ -6,7 +6,7 @@ license: MIT
 compatibility: Designed for Claude Code, Codex or similar harness, and for projects using Golang.
 metadata:
   author: samber
-  version: "1.1.3"
+  version: "1.1.4"
   openclaw:
     emoji: "🔧"
     homepage: https://github.com/samber/cc-skills-golang
@@ -24,7 +24,7 @@ paths:
 
 # Using spf13/viper for layered configuration in Go
 
-Viper resolves configuration values from multiple sources in a fixed precedence order. It has no user-facing surface — it doesn't define commands or flags. Its job is to answer "what is the value of key X right now?" by walking its source layers from highest to lowest priority.
+Viper answers "what is the value of key X right now?" by walking its source layers from highest to lowest priority. It defines no commands or flags — cobra owns those, and a config-file daemon can use viper with no cobra at all.
 
 **Official Resources:**
 
@@ -41,145 +41,85 @@ This skill is not exhaustive — refer to library documentation and code example
 go get github.com/spf13/viper@latest
 ```
 
-## Viper vs. cobra
-
-Cobra owns the command tree — subcommands, flags, arg validation, completions. Viper owns configuration resolution — it answers "what is the value of key X?" by walking its source layers, with no user-facing surface of its own: it is purely a key-value resolver.
-
-- **Cobra alone** — flag-only CLIs.
-- **Viper alone** — config-file daemons.
-- **Both** — bind flags at `PersistentPreRunE` via `BindPFlag`.
-
-→ See `samber/cc-skills-golang@golang-spf13-cobra` for the cobra side of this integration.
-
 ## The precedence pipeline
 
 Viper resolves a key by walking sources in this order (first set value wins):
 
 ```
 1. explicit Set()      — viper.Set("key", val)    highest priority
-2. flag                — bound pflag.Flag
+2. flag                — bound pflag.Flag the user actually passed
 3. env var             — BindEnv / AutomaticEnv
 4. config file         — ReadInConfig / MergeInConfig
 5. KV remote           — etcd / Consul
-6. default             — viper.SetDefault("key", val)   lowest priority
+6. default             — viper.SetDefault("key", val)
+7. flag default        — a bound flag's default, only when nothing above set the key
 ```
 
-This pipeline is fixed and cannot be reordered. Understanding it prevents most viper bugs: a key that "should" come from a config file may be shadowed by an env var or a flag with a default value.
+The pipeline is fixed. A key that "should" come from the config file is usually shadowed by an env var or an explicitly passed flag; a flag the user didn't pass never shadows anything, since its default ranks below even `SetDefault`.
 
-## Sources and config files
+## Config files
 
 ```go
-viper.SetConfigName("config")
-viper.AddConfigPath("$HOME/.myapp")
 if err := viper.ReadInConfig(); err != nil {
-    var notFound *viper.ConfigFileNotFoundError
+    var notFound viper.ConfigFileNotFoundError // value type — a *ConfigFileNotFoundError target never matches
     if !errors.As(err, &notFound) {
-        return fmt.Errorf("reading config: %w", err) // propagate real errors only
+        return fmt.Errorf("reading config: %w", err) // bad YAML, permissions: propagate
     }
 }
 ```
 
-`ConfigFileNotFoundError` must be handled gracefully — config files are usually optional. An unhandled error from a missing file crashes programs that are perfectly valid when run with only flags or env vars.
+Treat a missing config file as normal — a service that runs on flags and env alone shouldn't crash. `ConfigFileNotFoundError` comes only from the `SetConfigName` + `AddConfigPath` search; an explicit `SetConfigFile` path that doesn't exist returns an `fs.ErrNotExist` error instead, which usually should fail because the user asked for that file.
 
-For supported formats (JSON, TOML, YAML, HCL, INI, properties), `MergeInConfig`, and remote KV, see [sources-and-formats.md](references/sources-and-formats.md).
+## Env binding
 
-## Env binding and key replacers
-
-This is the highest-bug-density area in viper. All three settings must be wired together — missing any one breaks nested key resolution:
+Wire all three together — missing any one breaks nested key resolution:
 
 ```go
-// ✓ Good — all three wired together at startup
-viper.SetEnvPrefix("MYAPP")                             // prevent collisions: PORT → MYAPP_PORT
+viper.SetEnvPrefix("MYAPP")                             // PORT → MYAPP_PORT, no collisions
 viper.SetEnvKeyReplacer(strings.NewReplacer(".", "_"))  // database.host → MYAPP_DATABASE_HOST
 viper.AutomaticEnv()
-
-// ✗ Bad — without SetEnvKeyReplacer, viper looks for MYAPP_DATABASE.HOST (dot preserved)
+// ✗ without the replacer, viper looks for MYAPP_DATABASE.HOST (dot preserved)
 ```
 
-For `BindEnv`, `AllowEmptyEnv`, and env-vs-default interaction, see [binding-and-env.md](references/binding-and-env.md).
+`AutomaticEnv` answers `Get` calls but does not register keys, and `Unmarshal` decodes only keys viper already knows. An env var whose key appears in no config file, `SetDefault`, `BindEnv` or bound flag is invisible to `Unmarshal` even though `GetBool` sees it — register the key, or build the instance with `viper.NewWithOptions(viper.ExperimentalBindStruct())` (v1.20+).
 
 ## Flag binding (the cobra seam)
 
-Bind cobra flags to viper in `init()` or `PersistentPreRunE` — never in `RunE` (config loading in `PersistentPreRunE` already ran before `RunE`, so bindings set in `RunE` are missed):
-
-```go
-func init() {
-    rootCmd.PersistentFlags().Int("port", 8080, "listen port")
-    viper.BindPFlag("port", rootCmd.PersistentFlags().Lookup("port"))
-    // viper.BindPFlags(cmd.Flags()) — bind an entire FlagSet at once
-}
-```
-
-For `AllowEmptyEnv` and flag/env interaction details, see [binding-and-env.md](references/binding-and-env.md).
+Viper reads a bound flag's value and `Changed` state lazily, at each `Get` or `Unmarshal`, so the binding only has to exist before the first read — which rules out binding in `RunE` when `PersistentPreRunE` already unmarshaled the config. Bind each key once: when several subcommands bind their own local `--port` to the same key in `init()`, the last `BindPFlag` wins for every command, so bind those in the command's own `PreRunE`.
 
 ## Unmarshaling into structs
 
-`viper.Unmarshal` maps the resolved configuration into a struct using `mapstructure`:
+Give every field a `mapstructure` tag — mapstructure matches names case-insensitively but never maps `max_conn` to `MaxConn`. Prefer `UnmarshalKey("database", &dbCfg)` over `Sub("database").Unmarshal(...)`, because `Sub` returns nil (no error) when the key is absent and the method call panics.
 
-```go
-type Config struct {
-    Port     int `mapstructure:"port"`
-    Database struct {
-        MaxConn int `mapstructure:"max_conn"` // explicit tag: mapstructure won't convert underscore→camelCase
-    } `mapstructure:"database"`
-}
-var cfg Config
-viper.Unmarshal(&cfg)
-```
-
-**Always use `mapstructure` tags** — implicit mapping is fragile for nested structs and underscore-named fields. Prefer `UnmarshalKey("database", &dbCfg)` over `Sub("database").Unmarshal` — it avoids the nil-check `Sub` requires when the key is missing.
-
-For `time.Duration` / `net.IP` / slice decoders and custom `DecodeHook` registration, see [unmarshal.md](references/unmarshal.md).
-
-## Sub-trees
-
-`viper.Sub("database")` returns a new `*viper.Viper` scoped to the prefix, or **nil** if the key does not exist — always nil-check before calling methods on the result. Prefer `UnmarshalKey("database", &dbCfg)` which avoids the nil risk entirely.
+Viper's default decoder already parses duration strings, splits comma-separated strings into slices, and decodes weakly typed input (`"true"` → `bool`). Passing `viper.DecodeHook(...)` to `Unmarshal`, `viper.WithDecodeHook(...)` to `NewWithOptions`, or assigning `dc.DecodeHook` replaces that chain rather than appending to it — a lone `net.IP` hook makes every duration fail to decode — so compose yours with `StringToTimeDurationHookFunc()`, importing `github.com/go-viper/mapstructure/v2` (viper v1.20+), not `mitchellh/mapstructure`.
 
 ## Hot reload
 
-```go
-viper.WatchConfig()
-viper.OnConfigChange(func(e fsnotify.Event) { /* re-apply changed values */ })
-```
+`WatchConfig` watches the config file's directory and re-reads on Write or Create events for that path, so an in-place write reloads on every platform — test reload with `os.WriteFile`, not an editor save. A Remove event for the file ends the watch for good. On macOS and BSD an atomic save that renames a temp file over the config (many editors, `sed -i`, config-management tools) arrives as Remove then Create, so the first such save silently kills hot reload; on Linux the rename arrives as Create and reloads.
 
-`WatchConfig` uses fsnotify and watches inodes, so editors that write atomically via rename (vim, neovim) replace the inode and the callback may not fire. Test hot-reload with `echo >> config.yaml`, not editor saves. For race-safe reload patterns, see [watch-and-reload.md](references/watch-and-reload.md).
+The callback runs on the watcher goroutine, may fire more than once per save, and fires even when the re-read failed and the old values remain. Viper is not safe for concurrent use either — snapshot and validate a config struct inside the callback instead of calling `viper.Get` from request goroutines.
 
 ## Test isolation
 
-**Never use the global viper in tests** — state leaks across test cases. Use `viper.New()` per test so each instance is isolated:
-
-```go
-v := viper.New()
-v.SetConfigFile("testdata/config.yaml")
-require.NoError(t, v.ReadInConfig())
-```
-
-For `t.Setenv` interactions and `Reset()` limitations, see [testing-and-isolation.md](references/testing-and-isolation.md).
-
-## Best Practices
-
-1. **Set prefix + key replacer + AutomaticEnv together** — missing any one causes nested env keys to silently not resolve (`database.host` → `DATABASE.HOST` instead of `DATABASE_HOST`).
-2. **Handle `ConfigFileNotFoundError` gracefully** — a missing config file should not crash a service that runs with only flags and env vars.
-3. **Always use `mapstructure` tags on config structs** — implicit mapping silently misses nested and underscore-named fields.
-4. **Use `viper.New()` in tests, never the global** — the global accumulates state across test runs; per-test instances are isolated.
-5. **Bind flags before `Execute()`** — binding in `RunE` is too late; cobra parses flags before `RunE` runs.
+Use `viper.New()` per test instead of the global — the global instance keeps config files, bindings and `Set` values across tests, so results depend on test order.
 
 ## Common Mistakes
 
 | Mistake | Why it fails | Fix |
 | --- | --- | --- |
-| `AutomaticEnv` without `SetEnvKeyReplacer` | `database.host` looks for `MYAPP_DATABASE.HOST` (dot preserved) — never matches | Add `SetEnvKeyReplacer(strings.NewReplacer(".", "_"))` before `AutomaticEnv` |
+| `AutomaticEnv` without `SetEnvKeyReplacer` | `database.host` looks for `MYAPP_DATABASE.HOST` (dot preserved) — never matches | Add `SetEnvKeyReplacer(strings.NewReplacer(".", "_"))` |
 | No `mapstructure` tags on struct fields | Silently misses nested and underscore-named fields | Add `mapstructure:"key_name"` to every field |
 | Using global viper in tests | State from one test contaminates the next, causing flaky ordering | Create `viper.New()` per test |
-| Missing `ConfigFileNotFoundError` check | Missing config file crashes a service that should run on flags/env alone | `errors.As(err, &notFound)` — only propagate non-not-found errors |
+| Missing `ConfigFileNotFoundError` check | Missing config file crashes a service that should run on flags/env alone | `errors.As(err, &notFound)` with `var notFound viper.ConfigFileNotFoundError` — propagate everything else |
+| Env-only key missing after `Unmarshal` | `AutomaticEnv` doesn't register keys, so `Unmarshal` skips them | `SetDefault` or `BindEnv` the key, or `ExperimentalBindStruct()` |
 
 ## Further Reading
 
-- [sources-and-formats.md](references/sources-and-formats.md) — supported file formats, multi-path search, MergeInConfig, remote KV (etcd/Consul)
-- [binding-and-env.md](references/binding-and-env.md) — BindEnv, AutomaticEnv, SetEnvPrefix, SetEnvKeyReplacer, AllowEmptyEnv, timing rules
-- [unmarshal.md](references/unmarshal.md) — Unmarshal, UnmarshalKey, mapstructure tags, custom DecodeHooks (Duration, IP, slice)
-- [watch-and-reload.md](references/watch-and-reload.md) — WatchConfig, OnConfigChange, fsnotify caveats, atomic-rename trap, race-safe patterns
-- [testing-and-isolation.md](references/testing-and-isolation.md) — viper.New() per test, t.Setenv interactions, Reset() limitations, snapshot/restore
+- [sources-and-formats.md](references/sources-and-formats.md) — read when choosing file formats (HCL, INI and properties need a codec since v1.20), searching several paths, merging a base and an override file, embedding defaults, or reading etcd/Consul
+- [binding-and-env.md](references/binding-and-env.md) — read when an env var or flag doesn't resolve: `BindEnv` for third-party names, replacer mechanics, `AllowEmptyEnv`, binding timing
+- [unmarshal.md](references/unmarshal.md) — read when decoding into structs: `UnmarshalKey`, custom decode hooks (`net.IP`), `squash`, `remain`
+- [watch-and-reload.md](references/watch-and-reload.md) — read when adding hot reload: race-safe swap, debouncing, validating before applying
+- [testing-and-isolation.md](references/testing-and-isolation.md) — read when testing config code: injecting `*viper.Viper`, `t.Setenv`, `Reset()` limits
 
 ## Cross-References
 

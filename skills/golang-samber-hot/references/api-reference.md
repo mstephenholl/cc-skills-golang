@@ -38,8 +38,8 @@ Call these on the builder returned by `NewHotCache()`, then finalize with `.Buil
 | Method | Description |
 | --- | --- |
 | `WithTTL(ttl time.Duration)` | Default expiration for all entries |
-| `WithJitter(lambda float64, upperBound time.Duration)` | Randomize TTL by +/-lambda (capped at upperBound) to prevent thundering herd |
-| `WithJanitor()` | Start background goroutine to evict expired entries. Mutually exclusive with `WithoutLocking()` |
+| `WithJitter(lambda float64, upperBound time.Duration)` | Randomize each entry's TTL (exponential distribution bounded by `upperBound`) so entries written together don't expire together |
+| `WithJanitor()` | Start background goroutine to evict expired entries. Requires `WithTTL` — without a TTL, `Build()` panics. Mutually exclusive with `WithoutLocking()` |
 | `WithLoaders(loaders ...Loader[K, V])` | Chain of loader functions for cache misses. Execute sequentially; later loaders receive only unmapped keys |
 | `WithRevalidation(stale time.Duration, loaders ...Loader[K, V])` | Enable stale-while-revalidate. After TTL, entries become stale and trigger async refresh. Hard-expired after `stale` duration |
 | `WithRevalidationErrorPolicy(policy)` | `hot.KeepOnError` (keep stale value) or `hot.DropOnError` (drop on refresh failure) |

@@ -60,9 +60,12 @@ cmd.MarkFlagsMutuallyExclusive("json", "yaml", "table")
 // Fail if none provided
 cmd.MarkFlagsOneRequired("file", "stdin")
 
-// Require flag only if another flag is set
-cmd.MarkFlagsMutuallyExclusive("tls", "no-tls")
+// Exactly one: combine both
+cmd.MarkFlagsOneRequired("json", "yaml")
+cmd.MarkFlagsMutuallyExclusive("json", "yaml")
 ```
+
+Cobra checks these constraints after `PreRunE` and before `RunE`, and a group is enforced only on commands where every flag in it is defined.
 
 ## Persistent flag patterns
 
@@ -133,4 +136,4 @@ if cmd.Flags().Changed("port") {
 }
 ```
 
-`Changed()` is also how viper knows which flags are explicit overrides — it only promotes a flag to the highest precedence layer if `Changed()` is true.
+`Changed()` is also how viper knows which flags are explicit overrides — a bound flag takes viper's flag layer (above env and config file) only when `Changed()` is true; otherwise its default is used only if no other layer, `SetDefault` included, sets the key.

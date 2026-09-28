@@ -55,7 +55,7 @@ Prefer stdlib when it covers the operation — `lo` adds value for functional tr
 | --- | --- | --- |
 | Contains | `slices.Contains(s, v)` | `lo.ContainsBy(s, fn)` — predicate-based |
 | Sort | `slices.SortFunc(s, cmp)` | — (lo doesn't provide sort) |
-| Keys | `maps.Keys(m)` | `lo.UniqKeys(m)` — deduplicated keys |
+| Keys | `slices.Collect(maps.Keys(m))` (Go 1.23+; `maps.Keys` returns an iterator) | `lo.UniqKeys(m1, m2)` — deduplicated keys across maps |
 | Clone | `slices.Clone(s)` | `lo.Map(s, fn)` — when you need transform during clone |
 | Min/Max | `slices.Min(s)` | `lo.MinBy(s, fn)` — by extractor function |
 
@@ -82,16 +82,16 @@ results := lo.FilterMap(urls, func(url string, _ int) (Response, bool) {
 
 ## Iterator Patterns (loi)
 
-Requires Go 1.23+. Lazy iterators avoid intermediate allocations.
+Requires Go 1.23+. Lazy iterators avoid intermediate allocations. `loi` functions take `iter.Seq`, so wrap slices with `slices.Values`, and their callbacks drop the index argument that `lo` callbacks take.
 
 ### Eager vs lazy comparison
 
 ```go
-// Eager — allocates 2 intermediate slices
+// Eager — allocates 2 intermediate slices (callbacks take (item, index))
 result := lo.Map(lo.Filter(bigSlice, filterFn), mapFn)
 
-// Lazy — zero intermediate allocations
-for v := range loi.Map(loi.Filter(bigSlice, filterFn), mapFn) {
+// Lazy — zero intermediate allocations (callbacks take (item))
+for v := range loi.Map(loi.Filter(slices.Values(bigSlice), lazyFilterFn), lazyMapFn) {
     process(v)
 }
 ```
@@ -102,7 +102,7 @@ for v := range loi.Map(loi.Filter(bigSlice, filterFn), mapFn) {
 // Lazy pipeline: filter → map → take first 10
 pipeline := loi.Take(
     loi.Map(
-        loi.Filter(records, func(r Record) bool {
+        loi.Filter(slices.Values(records), func(r Record) bool {
             return r.Score > 0.8
         }),
         func(r Record) string {

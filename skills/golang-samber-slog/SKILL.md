@@ -6,7 +6,7 @@ license: MIT
 compatibility: Designed for Claude Code, Codex or similar harness, and for projects using Golang.
 metadata:
   author: samber
-  version: "1.1.4"
+  version: "1.1.5"
   openclaw:
     emoji: "🪵"
     homepage: https://github.com/samber/cc-skills-golang
@@ -78,7 +78,7 @@ Every samber/slog pipeline follows a canonical ordering. Records flow left to ri
 record → [Sampling] → [Pipe: trace/PII] → [Router] → [Sinks]
 ```
 
-Order matters: sampling before formatting saves CPU. Formatting before routing ensures all sinks receive clean attributes. Reversing this wastes work on records that get dropped.
+Formatting before routing ensures every sink receives the same clean attributes.
 
 ## Core Libraries
 
@@ -123,8 +123,6 @@ For full code examples of every pattern, see [Pipeline Patterns](references/pipe
 | Threshold | Log first N per interval, then sample at rate R | Production — preserves initial visibility |
 | Absolute | Cap at N records per interval globally | Hard cost control |
 | Custom | User function returns sample rate per record | Level-aware or time-aware rules |
-
-Sampling MUST be the outermost handler in the pipeline — placing it after formatting wastes CPU on records that get dropped.
 
 ```go
 // Threshold: log first 10 per 5s, then 10% — errors always pass through via Router
@@ -200,29 +198,22 @@ For configuration examples and shutdown patterns, see [Backend Handlers](referen
 
 | Mistake | Why it fails | Fix |
 | --- | --- | --- |
-| Sampling after formatting | Wastes CPU formatting records that get dropped | Place sampling as outermost handler |
-| Fanout to many synchronous handlers | Blocks caller — latency is sum of all handlers | Keep network sinks in batch/async mode and `Router()` each sink only the records it needs — not `Pool()`, which sends each record to ONE handler and silently drops it from the others |
-| Missing shutdown flush on batch handlers | Buffered logs lost on shutdown | `defer handler.Stop(ctx)` (Datadog), `defer lokiClient.Stop()` (Loki), `defer writer.Close()` (Kafka) |
+| Fanout to many synchronous handlers | Blocks caller — latency is the sum of all handlers (5 handlers at 10ms each cost 50ms per log call) | Keep network sinks in batch/async mode and `Router()` each sink only the records it needs — not `Pool()`, which sends each record to ONE handler and silently drops it from the others |
 | Router without default/catch-all handler | Unmatched records silently dropped | Add a handler with no predicate as catch-all |
 | `AttrFromContext` without HTTP middleware | Context has no request attributes to extract | Install `slog-gin`/`echo`/`fiber`/`chi` middleware first |
 | Using `Pipe` with no middleware | No-op wrapper adding per-record overhead | Remove `Pipe()` if no middleware needed |
 
 ## Performance Warnings
 
-- **Fanout latency** = sum of all handler latencies (sequential). With 5 handlers at 10ms each, every log call costs 50ms. Batch or async the slow sinks rather than reaching for `Pool()`, which load-balances — each record reaches only one handler
 - **Pipe middleware** adds per-record function call overhead — keep chains short (2-4 middlewares)
 - **slog-formatter** processes attributes sequentially — many formatters compound. For hot-path attribute formatting, prefer implementing `slog.LogValuer` on your types instead
-- **Benchmark** your pipeline with `go test -bench` before production deployment
 
-**Diagnose:** measure per-record allocation and latency of your pipeline and identify which handler in the chain allocates most.
+**Diagnose:** 1- `go test -bench=. -benchmem` on a benchmark that calls `logger.Info` through the full handler chain with each sink replaced by `slog.NewJSONHandler(io.Discard, nil)` — ns/op and allocs/op are the per-record cost of sampling, middleware and formatters; rerun with one stage removed to find the expensive one 2- `go tool pprof -alloc_objects` on that benchmark's `-memprofile` — names the handler that allocates most
 
 ## Best Practices
 
-1. **Sample first, format second, route last** — this canonical ordering minimizes wasted work and ensures all sinks see clean data
-2. **Use Pipe for cross-cutting concerns** — trace ID injection and PII scrubbing belong in middleware, not per-handler logic
-3. **Test pipelines with `slogmulti.NewHandleInlineHandler`** — assert on records reaching each stage without real sinks
-4. **Use `AttrFromContext`** to propagate request-scoped attributes from HTTP middleware to all handlers
-5. **Prefer Router over Fanout** when handlers need different record subsets — Router evaluates predicates and skips non-matching handlers
+1. **Use Pipe for cross-cutting concerns** — trace ID injection and PII scrubbing belong in middleware, not per-handler logic
+2. **Test pipelines with `slogmulti.NewHandleInlineHandler`** — assert on records reaching each stage without real sinks
 
 ## Cross-References
 

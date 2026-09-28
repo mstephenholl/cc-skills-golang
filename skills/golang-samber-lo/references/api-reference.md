@@ -46,7 +46,7 @@ For up-to-date signatures, use `godig symbol doc github.com/samber/lo <Symbol>` 
 | `lo.Times(n, fn)` | Call `fn(index)` n times, collect results |
 | `lo.Chunk(s, size)` | Split into batches of `size` |
 | `lo.Window(s, size)` | Sliding window of `size` over slice |
-| `lo.Sliding(s, size)` | Sliding window (overlapping), alias for Window |
+| `lo.Sliding(s, size, step)` | Windows of `size` advancing by `step` (`Window` is `Sliding` with step 1) |
 | `lo.Flatten(s)` | Flatten `[][]T` → `[]T` (one level) |
 | `lo.Concat(slices...)` | Concatenate multiple slices |
 | `lo.Interleave(slices...)` | Interleave elements from multiple slices |
@@ -256,7 +256,7 @@ Most transform functions have `Err` suffixes: `MapErr`, `FlatMapErr`, `FilterErr
 
 | Function | Description |
 | --- | --- |
-| `lo.ChannelDispatcher(ch, count, strategy)` | Fan-out to multiple channels. Strategies: `RoundRobin`, `Random`, `WeightedRandom`, `First`, `Least`, `Most` |
+| `lo.ChannelDispatcher(ch, count, bufCap, strategy)` | Fan-out to `count` channels. Strategies: `lo.DispatchingStrategyRoundRobin[T]`, `…Random[T]`, `…WeightedRandom[T](weights)`, `…First[T]`, `…Least[T]`, `…Most[T]` |
 | `lo.SliceToChannel(bufSize, s)` | Convert slice to buffered channel |
 | `lo.ChannelToSlice(ch)` | Collect channel into slice |
 | `lo.Generator(bufSize, fn)` | Create channel from generator function |
@@ -274,18 +274,18 @@ Most transform functions have `Err` suffixes: `MapErr`, `FlatMapErr`, `FilterErr
 | `lo.Async0` ... `lo.Async6` | Async with tuple returns |
 | `lo.Attempt(maxRetries, fn)` | Retry until success or max retries |
 | `lo.AttemptWithDelay(max, delay, fn)` | Retry with fixed delay between attempts |
-| `lo.AttemptWhile(fn)` | Retry while predicate returns true |
-| `lo.AttemptWhileWithDelay(delay, fn)` | AttemptWhile with delay between attempts |
-| `lo.Debounce(duration, fn)` | Debounce — execute after quiet period. Returns `(func(), func())` (trigger, cancel) |
-| `lo.DebounceBy(duration, fn)` | Debounce by key — separate debounce per key |
-| `lo.Throttle(duration, fn)` | Throttle — max one execution per duration |
-| `lo.ThrottleWithCount(duration, count, fn)` | Throttle allowing N executions per duration |
-| `lo.ThrottleBy(duration, fn)` | Throttle by key — separate throttle per key |
-| `lo.ThrottleByWithCount(duration, count, fn)` | ThrottleBy with count |
+| `lo.AttemptWhile(max, fn)` | Retry while `fn` returns `(err, true)` |
+| `lo.AttemptWhileWithDelay(max, delay, fn)` | AttemptWhile with delay between attempts |
+| `lo.NewDebounce(duration, fns...)` | Debounce — execute after quiet period. Returns `(trigger, cancel)` |
+| `lo.NewDebounceBy(duration, fns...)` | Debounce by key — separate debounce per key |
+| `lo.NewThrottle(interval, fns...)` | Throttle — max one execution per interval. Returns `(throttle, reset)` |
+| `lo.NewThrottleWithCount(interval, count, fns...)` | Throttle allowing N executions per interval |
+| `lo.NewThrottleBy(interval, fns...)` | Throttle by key — separate throttle per key |
+| `lo.NewThrottleByWithCount(interval, count, fns...)` | ThrottleBy with count |
 | `lo.WaitFor(fn, timeout, heartbeat)` | Poll until condition met or timeout |
 | `lo.WaitForWithContext(ctx, fn, ...)` | WaitFor with context cancellation |
 | `lo.Synchronize(mutexes...)` | Create synchronized wrapper. `sync.Locker`-based |
-| `lo.Transaction(fn)` | Execute function with rollback on error |
+| `lo.NewTransaction[T]().Then(exec, rollback).Process(state)` | Saga: run steps in order, roll back completed steps on error |
 
 ## Type Manipulation
 
@@ -333,14 +333,12 @@ Most transform functions have `Err` suffixes: `MapErr`, `FlatMapErr`, `FilterErr
 | --- | --- |
 | `lo.Must(val, err)` | Panic if err != nil, return val. Use in tests/init only |
 | `lo.Must0(err)` ... `lo.Must6(...)` | Must with 0-6 return values |
-| `lo.Try(fn)` | Run fn, return true if no panic |
+| `lo.Try(fn)` | Run fn, return false if it panics or returns an error |
 | `lo.Try1(fn)` ... `lo.Try6(fn)` | Try with 1-6 return values |
-| `lo.TryOr(fn, fallback)` | Run fn, return fallback on panic |
+| `lo.TryOr(fn, fallback)` | Run fn, return `(fallback, false)` if it panics or returns an error |
 | `lo.TryOr1(fn, fallback)` ... `lo.TryOr6(...)` | TryOr with 1-6 return values |
 | `lo.TryCatch(fn, catchFn)` | Try with catch handler |
 | `lo.TryWithErrorValue(fn)` | Try returning recovered error value |
 | `lo.TryCatchWithErrorValue(fn, catchFn)` | TryCatch with error value |
-| `lo.Validate(conditions...)` | Return first error from condition list |
-| `lo.ErrorsAs[T](err)` | Generic wrapper for `errors.As` |
-| `lo.Assert[T](v)` | Type assertion with panic message |
-| `lo.Assertf[T](v, format, args...)` | Type assertion with formatted panic message |
+| `lo.Validate(ok, format, args...)` | Return a formatted error when `ok` is false, nil otherwise |
+| `lo.ErrorsAs[T](err)` | Generic wrapper for `errors.As`. Returns `(T, bool)` |

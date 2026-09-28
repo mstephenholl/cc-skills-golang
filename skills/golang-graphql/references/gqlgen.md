@@ -85,9 +85,9 @@ The generated `Config` holds a `Resolvers` field of the generated interface. You
 ```go
 // graph/resolver.go — you own this file, not generated
 type Resolver struct {
-    db          *sql.DB
     userService *service.UserService
-    loaders     *dataloaders.Loaders // injected per-request
+    // no DataLoaders here — Resolver lives for the whole process;
+    // loaders are per-request and come from ctx (see below)
 }
 ```
 
@@ -199,7 +199,8 @@ srv.SetRecoverFunc(func(ctx context.Context, err any) error {
 srv.AddTransport(transport.Websocket{
     KeepAlivePingInterval: 10 * time.Second,
     Upgrader: websocket.Upgrader{
-        // Restrict to your own origin in production; true here is dev-only.
+        // Allow only your own origin — accepting any origin lets other sites open
+        // authenticated sockets with the user's cookies (cross-site WebSocket hijacking).
         CheckOrigin: func(r *http.Request) bool {
             return r.Header.Get("Origin") == "https://app.example.com"
         },

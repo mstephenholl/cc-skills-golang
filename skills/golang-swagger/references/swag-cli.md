@@ -6,7 +6,7 @@
 - [swag fmt — Format Annotations](#swag-fmt--format-annotations)
 - [Framework Integration Packages](#framework-integration-packages)
 - [Dynamic Configuration](#dynamic-configuration)
-- [Generics (swag v2)](#generics-swag-v2)
+- [Generics](#generics)
 - [Nested Composition](#nested-composition)
 - [Response Headers](#response-headers)
 - [Function-Scoped Structs](#function-scoped-structs)
@@ -47,11 +47,31 @@ swag fmt --exclude ./vendor                    # skip directories
 | Gin                      | `github.com/swaggo/gin-swagger`     |
 | Echo                     | `github.com/swaggo/echo-swagger`    |
 | Fiber                    | `github.com/swaggo/fiber-swagger`   |
-| Chi / net/http / Gorilla | `github.com/swaggo/http-swagger`    |
+| Chi / net/http / Gorilla | `github.com/swaggo/http-swagger/v2` |
 | Buffalo                  | `github.com/swaggo/buffalo-swagger` |
 | Hertz                    | `github.com/hertz-contrib/swagger`  |
 
-The shared files package (`github.com/swaggo/files`) is required by all integrations.
+Only the Gin adapter takes the UI files as an argument (`swaggerFiles "github.com/swaggo/files"`); the others embed them. Every route must end in a wildcard so the adapter can serve `index.html`, `doc.json` and the assets beneath it.
+
+```go
+// Gin
+r.GET("/swagger/*any", ginSwagger.WrapHandler(swaggerFiles.Handler))
+
+// Echo
+e.GET("/swagger/*", echoSwagger.WrapHandler)
+
+// Fiber — WrapHandler is already a fiber.Handler, not a function of swaggerFiles
+app.Get("/swagger/*", fiberSwagger.WrapHandler)
+
+// Chi
+r.Get("/swagger/*", httpSwagger.WrapHandler)
+
+// net/http
+mux.Handle("/swagger/", httpSwagger.WrapHandler)
+
+// Point the UI at an explicit spec URL (each adapter has its own URL option)
+r.Get("/swagger/*", httpSwagger.Handler(httpSwagger.URL("/swagger/doc.json")))
+```
 
 ## Dynamic Configuration
 
@@ -70,7 +90,7 @@ func main() {
 }
 ```
 
-## Generics (swag v2)
+## Generics
 
 Single type parameter:
 

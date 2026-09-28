@@ -37,7 +37,7 @@ Each `*E` hook returns `error`. The non-`*E` variants (`PersistentPreRun`, `PreR
 
 ### Inheritance rules
 
-`PersistentPreRunE` defined on the root command runs before every subcommand. But if a child command defines **its own** `PersistentPreRunE`, it **replaces** (does not chain) the parent's hook. Call the parent explicitly if you need both:
+`PersistentPreRunE` defined on the root command runs before every subcommand. But if a child command defines **its own** `PersistentPreRunE`, it **replaces** (does not chain) the parent's hook — cobra walks up from the executing command and runs only the first persistent hook it finds. The same applies to `PersistentPostRunE`. Call the parent explicitly if you need both:
 
 ```go
 var childCmd = &cobra.Command{
@@ -49,6 +49,17 @@ var childCmd = &cobra.Command{
         // child-specific logic
         return nil
     },
+}
+```
+
+Alternatively, set the package-level `cobra.EnableTraverseRunHooks = true` (cobra v1.8.0+) before `Execute()`: every ancestor's persistent pre-run hook then runs from the root down to the executing command, and persistent post-run hooks run from the command back up to the root. Because it is a global, it changes hook behavior for every command tree in the process — including other tests in the same package — so prefer the explicit call when only one child needs both hooks.
+
+```go
+func main() {
+    cobra.EnableTraverseRunHooks = true // root's and child's PersistentPreRunE both run
+    if err := rootCmd.Execute(); err != nil {
+        os.Exit(1)
+    }
 }
 ```
 
@@ -118,7 +129,9 @@ Args: cobra.MatchAll(cobra.MinimumNArgs(1), validateAllPositive),
 
 ```go
 func init() {
-    // groups must be registered before AddCommand
+    // register groups before the AddCommand calls that use them — cobra v1.6.0
+    // panics in AddCommand otherwise; later versions panic at Execute() when a
+    // GroupID has no matching group on the parent
     rootCmd.AddGroup(&cobra.Group{ID: "core", Title: "Core Commands:"})
     rootCmd.AddGroup(&cobra.Group{ID: "management", Title: "Management Commands:"})
 
@@ -157,13 +170,15 @@ var internalCmd = &cobra.Command{
 }
 
 var oldCmd = &cobra.Command{
-    Deprecated: "use `newcmd` instead",  // shown in help, prints warning on use
+    Deprecated: "use `newcmd` instead",  // hidden from help, still runs, prints a deprecation warning on use
 }
 ```
 
+Both hidden and deprecated commands drop out of help output and completions; only `Deprecated` prints `Command "old" is deprecated, use newcmd instead` when invoked.
+
 ## cobra.CheckErr
 
-`cobra.CheckErr(err)` is a convenience function: if `err != nil`, it prints the error to `cmd.ErrOrStderr()` and calls `os.Exit(1)`. Use it only in `main()` where you want a hard exit — not inside `RunE` where returning the error is preferred.
+`cobra.CheckErr(err)` is a convenience function: if `err != nil`, it prints `Error: <err>` to `os.Stderr` (not the command's `ErrOrStderr()`, so tests can't capture it) and calls `os.Exit(1)`. Use it only in `main()` where you want a hard exit — not inside `RunE` where returning the error is preferred.
 
 ```go
 func main() {

@@ -6,7 +6,7 @@ license: MIT
 compatibility: Designed for Claude Code, Codex or similar harness, and for projects using Golang.
 metadata:
   author: samber
-  version: "0.2.4"
+  version: "0.2.5"
   openclaw:
     emoji: "🔮"
     homepage: https://github.com/samber/cc-skills-golang
@@ -24,8 +24,8 @@ paths:
 
 **Modes:**
 
-- **Build mode** — generating new schemas, resolvers, or server setup: follow the skill's sequential instructions; launch a background agent to grep for existing resolver patterns and naming conventions before generating new code.
-- **Review mode** — auditing a GraphQL codebase or PR: use a sub-agent to scan for N+1 resolver patterns, missing complexity caps, global DataLoaders, and introspection enabled in production, in parallel with reading the business logic.
+- **Build** — new schemas, resolvers, or server setup. Match the existing resolver layout and `gqlgen.yml`; done when the schema regenerates (gqlgen) or parses (graph-gophers) cleanly and every child-list resolver loads through a per-request DataLoader.
+- **Review** — prioritize N+1 resolvers, global DataLoaders, missing complexity caps and introspection enabled in production; deliver ranked findings with file:line. If the user asked for fixes, apply them and re-verify.
 
 > **Community default.** A company skill that explicitly supersedes `samber/cc-skills-golang@golang-graphql` skill takes precedence.
 
@@ -85,26 +85,7 @@ type CreateUserPayload {
 
 ## Resolver Patterns
 
-Keep resolvers thin — they translate GraphQL inputs to domain calls and domain responses to GraphQL outputs.
-
-```go
-// ✓ Good — resolver delegates to service layer
-func (r *mutationResolver) CreateUser(ctx context.Context, input model.CreateUserInput) (*model.CreateUserPayload, error) {
-    user, err := r.userService.Create(ctx, input.Email, input.Name)
-    if err != nil {
-        return nil, formatError(err)
-    }
-    return &model.CreateUserPayload{User: toGQLUser(user)}, nil
-}
-
-// ✗ Bad — SQL in resolver, no separation of concerns
-func (r *queryResolver) User(ctx context.Context, id string) (*model.User, error) {
-    row := r.db.QueryRowContext(ctx, "SELECT * FROM users WHERE id = $1", id)
-    // ...
-}
-```
-
-Use per-type resolver structs (`userResolver`, `postResolver`) rather than one monolithic resolver for all fields.
+Keep resolvers thin — translate GraphQL input into a service call and the result back into GraphQL types, with per-type resolver structs (`userResolver`, `postResolver`) rather than one monolithic resolver; SQL inside a resolver bypasses both the service layer and the DataLoaders below.
 
 ## N+1 Prevention (DataLoaders)
 
@@ -132,28 +113,7 @@ In gqlgen, mark batched fields with `resolver: true` in `gqlgen.yml` to force a 
 
 ## Authentication and Authorization
 
-Two-layer model:
-
-1. **HTTP middleware** — extract and validate tokens, stash identity in `context.Context`.
-2. **Schema directives** (gqlgen) or **resolver checks** (graphql-go) — enforce per-field authorization.
-
-```go
-// HTTP middleware layer (both libraries)
-func AuthMiddleware(next http.Handler) http.Handler {
-    return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-        token := r.Header.Get("Authorization")
-        user, err := validateToken(token)
-        if err != nil {
-            http.Error(w, "Unauthorized", http.StatusUnauthorized)
-            return
-        }
-        ctx := context.WithValue(r.Context(), userKey, user)
-        next.ServeHTTP(w, r.WithContext(ctx))
-    })
-}
-```
-
-In gqlgen, use `@hasRole` schema directives for field-level authorization — authorization policy lives in the schema, not scattered across resolvers. See [gqlgen reference](./references/gqlgen.md).
+Authenticate in HTTP middleware that stores the caller's identity in `context.Context`, then authorize per field — `@hasRole`-style schema directives in gqlgen keep the policy in the schema instead of scattered across resolvers, and graph-gophers resolvers check the context identity explicitly. Authenticate subscriptions in the WebSocket `InitFunc` — browsers can't set an `Authorization` header on the upgrade request, so the token arrives in the `connection_init` payload ([gqlgen reference](./references/gqlgen.md)).
 
 ## Error Handling
 
@@ -193,7 +153,8 @@ func (r *subscriptionResolver) MessageAdded(ctx context.Context, room string) (<
     ch := make(chan *model.Message, 1)
     sub := r.pubsub.Subscribe(room) // subscribe once before the goroutine
     go func() {
-        defer close(ch) // always close; signals iteration to stop
+        defer close(ch)                       // always close; signals iteration to stop
+        defer r.pubsub.Unsubscribe(room, sub) // release the broker side too, or it keeps publishing into sub
         for {
             select {
             case <-ctx.Done():
@@ -262,9 +223,9 @@ For graph-gophers: `graphql.MaxDepth(10)` and `graphql.MaxParallelism(10)` optio
 
 ## Deep Dives
 
-- **[gqlgen reference](./references/gqlgen.md)** — codegen workflow, `gqlgen.yml`, DataLoaders, Federation v2, directives
-- **[graphql-go reference](./references/graphql-go.md)** — reflection resolver model, type mapping, tracing
-- **[Testing](./references/testing.md)** — gqlgen client harness, gqltesting, httptest patterns
+- **[gqlgen reference](./references/gqlgen.md)** — read when working in a gqlgen project: `gqlgen.yml` model binding, DataLoader wiring and batch-function shape, auth directives, WebSocket transport, file uploads, Federation v2, production handler setup
+- **[graphql-go reference](./references/graphql-go.md)** — read when working with graph-gophers: Go type mapping (`int32`, pointers for nullable), resolver and args structs, custom scalars, OpenTelemetry tracing
+- **[Testing](./references/testing.md)** — read when writing GraphQL tests: gqlgen client harness, gqltesting, subscriptions, auth directives
 
 ## Cross-References
 

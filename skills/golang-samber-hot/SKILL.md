@@ -6,7 +6,7 @@ license: MIT
 compatibility: Designed for Claude Code, Codex or similar harness, and for projects using Golang.
 metadata:
   author: samber
-  version: "1.1.3"
+  version: "1.1.4"
   openclaw:
     emoji: "🔥"
     homepage: https://github.com/samber/cc-skills-golang
@@ -59,7 +59,7 @@ Pick based on your access pattern — the wrong algorithm wastes memory or tanks
 
 **Decision shortcut:** Start with `hot.WTinyLFU`. Switch only when profiling shows the miss rate is too high for your SLO.
 
-For detailed algorithm comparison, benchmarks, and a decision tree, see [Algorithm Guide](./references/algorithm-guide.md).
+Read [references/algorithm-guide.md](./references/algorithm-guide.md) when the workload doesn't clearly match one row, or when comparing algorithms by hit rate.
 
 ## Core Usage
 
@@ -99,22 +99,18 @@ user, found, err := cache.Get(123) // triggers loader on miss
 
 ## Capacity Sizing
 
-Before setting the cache capacity, estimate how many items fit in the memory budget:
-
-1. **Estimate single-item size** — estimate size of the struct, add the size of heap-allocated fields (slices, maps, strings). Include the key size. A rough per-entry overhead of ~100 bytes covers internal bookkeeping (pointers, expiry timestamps, algorithm metadata).
-2. **Ask the developer** how much memory is dedicated to this cache in production (e.g., 256 MB, 1 GB). This depends on the service's total memory and what else shares the process.
-3. **Compute capacity** — `capacity = memoryBudget / estimatedItemSize`. Round down to leave headroom.
+Capacity is an item count, not bytes, so derive it from a memory budget: `capacity = memoryBudget / bytesPerEntry`, rounded down for headroom. Estimate bytes per entry as the struct size plus its heap-allocated fields (slices, maps, strings), the key, and ~100 bytes of bookkeeping (pointers, expiry timestamps, algorithm metadata).
 
 ```
 Example: *User struct ~500 bytes + string key ~50 bytes + overhead ~100 bytes = ~650 bytes/entry
          256 MB budget → 256_000_000 / 650 ≈ 393,000 items
 ```
 
-If the item size is unknown, ask the developer to measure it with a unit test that allocates N items and checks `runtime.ReadMemStats`. Guessing capacity without measuring leads to OOM or wasted memory.
+Expose capacity as configuration rather than a constant, since the right value depends on the production memory limit. If the budget is unknown, choose a conservative default, write a test that fills N entries and compares `runtime.ReadMemStats` before and after to measure bytes per entry, and state the assumption in your reply.
 
 ## Common Mistakes
 
-1. **Forgetting `WithJanitor()`** — without it, expired entries stay in memory until the algorithm evicts them. Always chain `.WithJanitor()` in the builder and `defer cache.StopJanitor()`.
+1. **TTL and janitor out of step** — set a TTL when the source data changes (immutable lookups can skip it); when a TTL is set, chain `.WithJanitor()` and `defer cache.StopJanitor()`, or expired entries stay in memory until the algorithm evicts them. `WithJanitor()` without a TTL panics in `Build()` (non-positive ticker interval).
 2. **Calling `SetMissing()` without missing cache config** — panics at runtime. Enable `WithMissingCache(algorithm, capacity)` or `WithMissingSharedCache()` in the builder first.
 3. **`WithoutLocking()` + `WithJanitor()`** — mutually exclusive, panics. `WithoutLocking()` is only safe for single-goroutine access without background cleanup.
 4. **Oversized cache** — a cache holding everything is a map with overhead. Size to your working set (typically 10-20% of total data). Monitor hit rate to validate.
@@ -122,14 +118,13 @@ If the item size is unknown, ask the developer to measure it with a unit test th
 
 ## Best Practices
 
-1. Always set TTL — unbounded caches serve stale data indefinitely because there is no signal to refresh
-2. Use `WithJitter(lambda, upperBound)` to spread expirations — without jitter, items created together expire together, causing thundering herd on the loader
-3. Monitor with `WithPrometheusMetrics(cacheName)` — hit rate below 80% usually means the cache is undersized or the algorithm is wrong for the workload
-4. Use `WithCopyOnRead(fn)` / `WithCopyOnWrite(fn)` for mutable values — without copies, callers mutate cached objects and corrupt shared state
+1. Use `WithJitter(lambda, upperBound)` to spread expirations — without jitter, items created together expire together, causing thundering herd on the loader
+2. Monitor with `WithPrometheusMetrics(cacheName)` — hit rate below 80% usually means the cache is undersized or the algorithm is wrong for the workload
+3. Use `WithCopyOnRead(fn)` / `WithCopyOnWrite(fn)` for mutable values — without copies, callers mutate cached objects and corrupt shared state
 
-For advanced patterns (revalidation, sharding, missing cache, monitoring setup), see [Production Patterns](./references/production-patterns.md).
+Read [references/production-patterns.md](./references/production-patterns.md) when adding stale-while-revalidate, sharding, negative (missing-key) caching, loader chains, warm-up, or Prometheus alerting.
 
-For the complete API surface, see [API Reference](./references/api-reference.md).
+Read [references/api-reference.md](./references/api-reference.md) when checking a builder option or cache method signature — for example `Peek` (no loader, no expiry check) versus `Get`.
 
 If you encounter a bug or unexpected behavior in samber/hot, open an issue at <https://github.com/samber/hot/issues>.
 

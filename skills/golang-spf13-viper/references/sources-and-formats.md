@@ -11,17 +11,25 @@
 
 ## Supported file formats
 
-Viper detects format from file extension. Supported extensions:
+Viper detects format from file extension. Since v1.20 the core decodes only YAML, JSON, TOML and dotenv:
 
-| Format     | Extensions      |
-| ---------- | --------------- |
-| YAML       | `.yaml`, `.yml` |
-| TOML       | `.toml`         |
-| JSON       | `.json`         |
-| HCL        | `.hcl`          |
-| INI        | `.ini`          |
-| Properties | `.properties`   |
-| dotenv     | `.env`          |
+| Format | Extensions | Codec |
+| --- | --- | --- |
+| YAML | `.yaml`, `.yml` | built in |
+| TOML | `.toml` | built in |
+| JSON | `.json` | built in |
+| dotenv | `.env`, `.dotenv` | built in |
+| HCL | `.hcl`, `.tfvars` | `github.com/go-viper/encoding/hcl` |
+| INI | `.ini` | `github.com/go-viper/encoding/ini` |
+| Properties | `.properties`, `.props`, `.prop` | `github.com/go-viper/encoding/javaproperties` |
+
+Register an external codec on the instance, or `ReadInConfig` returns an error for that extension:
+
+```go
+reg := viper.NewCodecRegistry()
+reg.RegisterCodec("hcl", hcl.Codec{})
+v := viper.NewWithOptions(viper.WithCodecRegistry(reg))
+```
 
 Force a format when there is no extension:
 
@@ -41,12 +49,15 @@ viper.AddConfigPath(".")                 // search path 3 (lowest priority)
 
 // viper searches paths in order, stops at the first match
 if err := viper.ReadInConfig(); err != nil {
-    var notFound *viper.ConfigFileNotFoundError
+    var notFound viper.ConfigFileNotFoundError // returned by value — a pointer target never matches
     if !errors.As(err, &notFound) {
         return err  // real error (permission denied, malformed YAML, etc.)
     }
     // not found — continue with flags/env/defaults
 }
+
+// ConfigFileNotFoundError only comes from this search mode. With an explicit
+// SetConfigFile path, a missing file returns an fs.ErrNotExist error instead.
 
 // After reading, this returns the resolved path:
 fmt.Println("Using config:", viper.ConfigFileUsed())

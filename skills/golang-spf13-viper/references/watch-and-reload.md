@@ -3,7 +3,7 @@
 ## Table of Contents
 
 - [Basic setup](#basic-setup)
-- [The atomic-rename trap](#the-atomic-rename-trap)
+- [Which file events reload](#which-file-events-reload)
 - [Race-safe reload pattern](#race-safe-reload-pattern)
 - [Debouncing rapid changes](#debouncing-rapid-changes)
 - [Validating config before applying](#validating-config-before-applying)
@@ -19,27 +19,29 @@ viper.OnConfigChange(func(e fsnotify.Event) {
 })
 ```
 
-`WatchConfig` starts a background goroutine that watches the config file using fsnotify. Call it after `ReadInConfig`.
+`WatchConfig` starts a background goroutine that watches the config file using fsnotify. Call it after `ReadInConfig` — it needs the resolved config path.
 
-## The atomic-rename trap
+## Which file events reload
 
-Most editors (vim, neovim, many CI tools) write config files by creating a new file and then renaming it over the old one. This replaces the inode that fsnotify is watching — the watch may not fire, or may fire with `Op: RENAME` instead of `Op: WRITE`, or may fire twice.
+Viper (v1.21) watches the config file's **directory** and filters events by path:
 
-**Test hot reload with direct file writes, not editor saves:**
+| Event on the config path | Effect |
+| --- | --- |
+| Write or Create | `ReadInConfig`, then `OnConfigChange` — even if the re-read failed |
+| Symlink target changed (Kubernetes ConfigMap `..data` swap) | Reload, as for Write |
+| Remove | **The watch loop exits for good** — later writes never reload |
+| Rename, Chmod | Ignored |
 
-```go
-// reliable in tests:
-os.WriteFile("config.yaml", newContent, 0644)
+Consequences:
 
-// unreliable for testing:
-// opening vim and :w — may trigger RENAME instead of WRITE
-```
-
-In production, this is less of an issue if your config management tool (Kubernetes ConfigMap volume mount, Consul Template, etc.) is aware of inode behavior.
+- **Atomic saves differ by platform.** Renaming a temp file over the config (many editors, `sed -i`, config-management tools) arrives as Create on Linux (inotify) and reloads. On macOS and BSD (kqueue) it arrives as Remove then Create, so the first atomic save silently ends hot reload.
+- **Delete-and-recreate deploys end the watch everywhere.** Replace the file with a rename, or mount a directory whose symlink is swapped.
+- **Test with in-place writes** — `os.WriteFile("config.yaml", data, 0o644)` produces Write events on every platform.
+- **A truncating write can fire twice** — once on the truncate, once on the data — so a reload may briefly see an empty file. Validate before applying (below).
 
 ## Race-safe reload pattern
 
-Config reload happens in a background goroutine. Any shared state updated in `OnConfigChange` must be synchronized:
+`OnConfigChange` runs on the watcher goroutine, which has just rewritten viper's config map in `ReadInConfig`. Viper is not safe for concurrent use, so request goroutines calling `viper.Get*` race with every reload. Decode into a struct inside the callback and publish it under a lock:
 
 ```go
 type Config struct {
@@ -66,7 +68,7 @@ viper.OnConfigChange(func(e fsnotify.Event) {
 })
 ```
 
-Reads use `appCfg.mu.RLock()`. Never read directly from viper in hot paths during reload — the window between `OnConfigChange` firing and viper updating its internal state is non-deterministic.
+Readers take `cfg.mu.RLock()` and never call `viper.Get*` directly. An `atomic.Pointer[Config]` swapped in the callback works too and keeps readers lock-free.
 
 ## Debouncing rapid changes
 
@@ -109,4 +111,4 @@ viper.OnConfigChange(func(e fsnotify.Event) {
 
 ## Stopping the watcher
 
-There is no documented way to stop `WatchConfig` once started. Design your application so that the watcher's lifetime matches the process lifetime. For testing, create a new `viper.New()` instance per test — the watcher is per-instance and is garbage-collected with the instance.
+`WatchConfig` has no stop function. Its goroutine holds the viper instance and exits only on a Remove event for the config file or a watcher error — so design the watcher's lifetime to match the process. In tests, a watcher started on a file under `t.TempDir()` exits when the directory is cleaned up; without that it leaks for the rest of the test binary and goroutine-leak checkers will report it.

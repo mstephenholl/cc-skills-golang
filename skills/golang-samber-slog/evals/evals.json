@@ -114,12 +114,12 @@
   {
     "id": 9,
     "name": "pool-vs-fanout-latency",
-    "description": "Tests whether the model recommends Pool over Fanout and correctly describes Pool's latency model",
+    "description": "Tests whether the model recognizes that Pool load-balances rather than broadcasts, and what that means for latency and delivery",
     "prompt": "I'm replacing slogmulti.Fanout with slogmulti.Pool to reduce log-call latency. I have 4 handlers with these p99 write times: stdout (1ms), Loki (20ms), Datadog (30ms), Sentry (15ms). My current Fanout p99 latency per log call is ~66ms. What will Pool's p99 latency be, and are there any risks I should know about with Pool that don't exist with Fanout?",
-    "trap": "Without the skill, the model says Pool will have ~0ms latency (wrongly treating it as fire-and-forget) or cannot identify the risks. The skill teaches: Pool latency = max of all handlers (30ms, not 66ms); risk = Pool may silently swallow handler errors that Fanout would surface synchronously.",
+    "trap": "Without the skill, the model assumes Pool broadcasts to all handlers in parallel (latency = the slowest handler) or treats it as fire-and-forget. The skill teaches: Pool sends each record to ONE handler (trying the next only if it errors), so each call pays a single handler's write time but every sink receives only part of the logs; slow sinks belong in batch/async mode under Fanout or Router instead.",
     "assertions": [
-      {"id": "9.1", "text": "Correctly states Pool p99 latency will be ~30ms (the slowest handler, Datadog) not the sum"},
-      {"id": "9.2", "text": "Explains that Pool dispatches concurrently so latency = max(handler latencies), not sum"},
+      {"id": "9.1", "text": "States that with Pool each log call pays only the one handler it is dispatched to, so p99 is at most the slowest handler (~30ms, Datadog) rather than the ~66ms sum"},
+      {"id": "9.2", "text": "Explains that Pool is one-of-N load balancing — each record reaches a single handler, so stdout, Loki, Datadog and Sentry each receive only part of the logs — and recommends batching/async for the slow sinks under Fanout or Router to cut latency instead"},
       {"id": "9.3", "text": "Identifies at least one risk of Pool vs Fanout (e.g. handler errors may not surface synchronously, or error handling differs)"},
       {"id": "9.4", "text": "Shows correct Pool syntax: slogmulti.Pool()(handlers...) with the double call"},
       {"id": "9.5", "text": "Does NOT claim Pool is fully asynchronous/fire-and-forget with zero latency impact"}

@@ -66,7 +66,7 @@
     "assertions": [
       {
         "id": "3.1",
-        "text": "Uses errors.As(err, &notFound) with *viper.ConfigFileNotFoundError"
+        "text": "Detects the missing file with errors.As against a value-typed target (var notFound viper.ConfigFileNotFoundError) or an equivalent type assertion (err.(viper.ConfigFileNotFoundError)) — a *viper.ConfigFileNotFoundError pointer target never matches, because viper returns the error by value"
       },
       {
         "id": "3.2",
@@ -143,13 +143,13 @@
   {
     "id": 6,
     "name": "bind-pflag-timing",
-    "description": "Tests that BindPFlag must be called before Execute() runs",
-    "prompt": "I'm integrating cobra and viper in my Go CLI. I call viper.BindPFlag in the command's RunE function to bind the --port flag. But viper.GetInt('port') always returns the default 8080, even when I pass --port 9090. Why?",
-    "trap": "Without the skill, the model may check the flag name spelling or viper setup. The root cause is binding after Execute() has already parsed the flags — BindPFlag must happen in init() or PersistentPreRunE, before the flags are resolved.",
+    "description": "Tests that a flag binding must exist before the first read of its key, such as a viper.Unmarshal in the root's PersistentPreRunE",
+    "prompt": "I'm integrating cobra and viper in my Go CLI. The root command's PersistentPreRunE calls viper.Unmarshal(&cfg) into a package-level Config struct. My serve command defines a --port flag and calls viper.BindPFlag(\"port\", cmd.Flags().Lookup(\"port\")) at the start of its RunE, then starts the server on cfg.Port. The server always listens on the default 8080, even when I pass --port 9090. Why?",
+    "trap": "Without the skill, the model may check the flag name spelling, or claim that cobra's flag parsing already happened so a late binding misses the flag's Changed state. Viper reads bound flags lazily at each Get or Unmarshal — the real problem is that cfg was decoded in PersistentPreRunE before RunE created the binding. The binding must move to init() or ahead of the Unmarshal.",
     "assertions": [
       {
         "id": "6.1",
-        "text": "Identifies that BindPFlag must be called before Execute() / before RunE runs"
+        "text": "Identifies that cfg was unmarshaled in PersistentPreRunE before the BindPFlag call in RunE ran, so the struct never saw the flag"
       },
       {
         "id": "6.2",
@@ -157,7 +157,7 @@
       },
       {
         "id": "6.3",
-        "text": "Explains that cobra parses flags before RunE runs — binding after parsing misses the Changed state"
+        "text": "Explains that viper reads a bound flag's value and Changed state lazily at Get/Unmarshal time, so the binding only has to exist before the first read of the key"
       },
       {
         "id": "6.4",
@@ -193,17 +193,17 @@
   {
     "id": 8,
     "name": "duration-decode-hook",
-    "description": "Tests that time.Duration fields in structs require a decode hook for Unmarshal to work",
-    "prompt": "My Go viper config has 'timeout: 30s' in the YAML file. My struct has Timeout time.Duration and the mapstructure tag. After viper.Unmarshal, cfg.Timeout is 0. Why?",
-    "trap": "Without the skill, the model may suggest using GetDuration or changing the config format to nanoseconds. The correct fix is registering StringToTimeDurationHookFunc via a decode hook option in Unmarshal.",
+    "description": "Tests that a custom decode hook replaces viper's default hook chain, so time.Duration fields stop decoding unless the duration hook is composed back in",
+    "prompt": "My Go viper config has 'timeout: 30s' and 'bind_addr: 10.0.0.1' in the YAML file. My struct has Timeout time.Duration and BindAddr net.IP fields with mapstructure tags, and I call viper.Unmarshal(&cfg, viper.DecodeHook(mapstructure.StringToIPHookFunc())) so the IP parses. Unmarshal fails with \"'timeout' cannot parse value as 'time.Duration'\" and cfg.Timeout is 0. Why?",
+    "trap": "Without the skill, the model may assume mapstructure never decodes durations, or suggest GetDuration or a nanosecond config value. Viper's default decoder already includes StringToTimeDurationHookFunc (plus a comma-splitting slice hook); viper.DecodeHook(...) replaces that chain instead of appending to it, so the IP hook must be composed with the duration hook.",
     "assertions": [
       {
         "id": "8.1",
-        "text": "Identifies that mapstructure cannot decode a duration string into time.Duration without a hook"
+        "text": "Identifies that viper.DecodeHook(...) replaces viper's default decode hook chain, which already contains the duration hook, rather than adding to it"
       },
       {
         "id": "8.2",
-        "text": "Shows viper.Unmarshal(&cfg, func(dc *mapstructure.DecoderConfig) { dc.DecodeHook = mapstructure.ComposeDecodeHookFunc(mapstructure.StringToTimeDurationHookFunc(), ...) })"
+        "text": "Composes the IP hook with the duration hook via mapstructure.ComposeDecodeHookFunc — in viper.DecodeHook(...), or in a DecoderConfig option that composes with the existing dc.DecodeHook"
       },
       {
         "id": "8.3",
@@ -218,17 +218,17 @@
   {
     "id": 9,
     "name": "watch-config-atomic-rename-trap",
-    "description": "Tests understanding of fsnotify behavior with editors that use atomic rename",
-    "prompt": "I've set up viper.WatchConfig() in my Go service. When I test it by editing the config file in vim and saving, the OnConfigChange callback sometimes doesn't fire. What's happening?",
-    "trap": "Without the skill, the model may suggest checking fsnotify version or debugging the callback. The root cause is that vim uses atomic rename (write-tmp, rename) which replaces the inode — fsnotify watches the inode and may miss or misfire for rename-based writes.",
+    "description": "Tests that a Remove event for the config path — produced on macOS when a save renames a temp file over the config — ends viper's watch loop permanently",
+    "prompt": "I've set up viper.WatchConfig() in my Go service on macOS. Hot reload works when I append to the config file with echo, but after I save the file once from my editor, the OnConfigChange callback never fires again — not even for later echo appends. What's happening?",
+    "trap": "Without the skill, the model may suggest checking the fsnotify version, debugging the callback, or blame the editor replacing the watched inode. Viper watches the config file's directory; the editor's atomic save (write temp file, rename over the original) arrives on macOS as Remove then Create, and the Remove event for the config path ends viper's watch loop for good.",
     "assertions": [
       {
         "id": "9.1",
-        "text": "Explains that vim and many editors write atomically via rename (write-to-temp, then rename over original)"
+        "text": "Explains that the editor saves atomically — it writes a temp file and renames it over the original"
       },
       {
         "id": "9.2",
-        "text": "Explains that fsnotify watches the inode, which is replaced by rename-based writes"
+        "text": "Explains that viper watches the config file's directory and that the Remove event for the config path, emitted on macOS when a file is renamed over it, ends the watch loop permanently"
       },
       {
         "id": "9.3",
@@ -236,7 +236,7 @@
       },
       {
         "id": "9.4",
-        "text": "Does NOT suggest downgrading vim or switching to a different editor as the fix"
+        "text": "Does NOT suggest switching to a different editor as the fix"
       }
     ]
   },
@@ -333,7 +333,7 @@
       },
       {
         "id": "13.4",
-        "text": "Handles the case where the override file is missing (ConfigFileNotFoundError or os.Stat check)"
+        "text": "Handles the case where the override file is missing — errors.Is(err, fs.ErrNotExist) (or os.IsNotExist) for an explicit SetConfigFile path, ConfigFileNotFoundError only when the file is located via SetConfigName/AddConfigPath search, or an os.Stat check"
       }
     ]
   },
@@ -440,21 +440,21 @@
   {
     "id": 18,
     "name": "weakly-typed-input-env-bool",
-    "description": "Tests WeaklyTypedInput for env vars that are always strings but map to bool struct fields",
+    "description": "Tests that viper.Unmarshal ignores keys that exist only as env vars under AutomaticEnv, even though viper.Get* sees them",
     "prompt": "My Go service has a Config struct with an Enabled bool field and mapstructure tag. Setting MY_APP_ENABLED=true in the environment and calling viper.Unmarshal leaves cfg.Enabled as false, even though viper.GetBool works. Why?",
-    "trap": "Without the skill, the model may suggest BindEnv or different env var naming. The issue is that env vars are always strings — mapstructure receives the string \"true\" and cannot decode it to bool without WeaklyTypedInput or a decode hook.",
+    "trap": "Without the skill, the model may blame string-to-bool conversion and enable WeaklyTypedInput, which viper already enables by default. The real cause is that Unmarshal decodes only keys viper already knows (config file, SetDefault, BindEnv, bound flags); AutomaticEnv answers Get calls but registers no keys, so the env-only 'enabled' key is skipped.",
     "assertions": [
       {
         "id": "18.1",
-        "text": "Identifies that env vars are always strings and mapstructure cannot decode \"true\" to bool by default"
+        "text": "Identifies that Unmarshal decodes only keys viper already knows (config file, SetDefault, BindEnv, bound flags) and that AutomaticEnv does not register the env-only 'enabled' key"
       },
       {
         "id": "18.2",
-        "text": "Suggests enabling WeaklyTypedInput in the DecoderConfig or using a StringToBool decode hook"
+        "text": "Registers the key before Unmarshal with viper.BindEnv(\"enabled\") or viper.SetDefault(\"enabled\", false), or builds the instance with viper.NewWithOptions(viper.ExperimentalBindStruct())"
       },
       {
         "id": "18.3",
-        "text": "Shows viper.Unmarshal(&cfg, func(dc *mapstructure.DecoderConfig) { dc.WeaklyTypedInput = true }) or equivalent"
+        "text": "Rules out string-to-bool conversion as the cause — viper's default decoder already decodes weakly typed input such as \"true\" into bool"
       },
       {
         "id": "18.4",

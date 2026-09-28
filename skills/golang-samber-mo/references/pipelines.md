@@ -17,6 +17,7 @@ samber/mo provides sub-packages (`option`, `result`, `either`, `either3`, `eithe
 - [either3/, either4/, either5/ Packages](#either3-either4-either5-packages)
 - [When to Use Pipes vs Direct Methods](#when-to-use-pipes-vs-direct-methods)
   - [Example: Combined Usage](#example-combined-usage)
+- [Fold — Type-Changing Extraction](#fold--type-changing-extraction)
 
 ## Why Sub-Packages Exist
 
@@ -160,4 +161,17 @@ result := option.Pipe2(
     option.Map(func(v int) string { return strconv.Itoa(v) }),  // -> Option[string]
     option.Map(func(s string) User { return User{Name: s} }),   // -> Option[User]
 )
+```
+
+## Fold — Type-Changing Extraction
+
+`mo.Fold` collapses any Option, Result or Either into a value of another type, replacing an `IsOk`/`IsError` branch plus `MustGet`/`Error` calls. The success callback comes first, the failure callback second:
+
+```go
+label := mo.Fold[error, int, string](
+    mo.Ok(42), // any Foldable: Option, Result, or Either
+    func(v int) string { return fmt.Sprintf("value: %d", v) },
+    func(err error) string { return "error: " + err.Error() },
+)
+// "value: 42"
 ```

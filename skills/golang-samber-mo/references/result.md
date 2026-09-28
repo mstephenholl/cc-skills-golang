@@ -24,7 +24,7 @@
 | `mo.Err[T](err error)` | Creates a failed Result |
 | `mo.Errf[T](format string, a ...any)` | Creates failed Result with formatted error message |
 | `mo.TupleToResult[T](value T, err error)` | Converts Go's (T, error) tuple — Ok if err is nil, Err otherwise |
-| `mo.Try[T](f func() (T, error))` | Executes function, wraps result — Ok on success, Err on error |
+| `mo.Try[T](f func() (T, error))` | Executes function, wraps result — Ok on success, Err on error. Does not recover panics; use `mo.Do` for that |
 
 ### Do Notation
 
@@ -37,7 +37,7 @@ result := mo.Do(func() int {
 // Ok(42)
 ```
 
-`mo.Do` executes a closure and catches any panic from `MustGet()` calls, converting them to `Err`. This enables imperative-style code with monadic error propagation.
+`mo.Do` executes a closure and catches any panic, converting it to `Err` — this enables imperative-style code with monadic error propagation. It recovers every panic, not only those from `MustGet()`, so a nil dereference inside the closure also becomes an `Err` instead of a crash.
 
 ## Query Methods
 

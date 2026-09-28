@@ -58,7 +58,7 @@ viper.AutomaticEnv()
 viper.GetString("database.host")  // looks for MYAPP_DATABASE_HOST — matches
 ```
 
-The replacer operates on the viper key **before** prepending the prefix, so the lookup chain is: `database.host` → replace `.` with `_` → `database_host` → prepend prefix → `MYAPP_DATABASE_HOST`.
+Viper prepends the prefix and uppercases first, then applies the replacer to the whole name: `database.host` → `MYAPP_DATABASE.HOST` → `MYAPP_DATABASE_HOST`. The replacer therefore also rewrites the prefix — a `-` → `_` replacer turns prefix `MY-APP` into `MY_APP_…`.
 
 ## AllowEmptyEnv
 
@@ -86,13 +86,15 @@ Bind an entire flag set:
 viper.BindPFlags(rootCmd.PersistentFlags())
 ```
 
-**Timing rule:** Bind flags in `init()` or in `PersistentPreRunE`. The binding call must happen before `Execute()` parses flags — specifically, before any `viper.Get*` call on a flag-backed key. Binding after `Execute()` causes the flag's `Changed` state to be unknown, so viper may not promote the flag value to the correct precedence layer.
+**Timing rule:** Viper stores the `*pflag.Flag` and reads its `Changed` state and value lazily on every `Get`, so a binding made after parsing still works for later reads. What fails is reading before the binding exists — typically a `viper.Unmarshal` in the root's `PersistentPreRunE` while the subcommand binds in `RunE`. Bind in `init()` or `PersistentPreRunE`.
+
+**One binding per key:** `BindPFlag` overwrites any earlier binding for the same key. When two subcommands each define a local `--port` and bind it to `"port"` in `init()`, the last `init()` wins for every command — running the other subcommand with `--port 9090` reads an unchanged flag and falls through to env, file or defaults. Bind such flags in each command's `PreRunE`, which runs only for the executing command, or give them distinct keys.
 
 ## How pflag binding interacts with precedence
 
 Viper checks `flag.Changed` (whether the user explicitly passed the flag). This is how it distinguishes between "flag default" (low priority) and "flag explicitly set" (high priority):
 
-- `flag.Changed == false` (flag has its default): viper treats the flag as not present and falls through to env/file/default.
+- `flag.Changed == false` (flag has its default): viper treats the flag as not present and falls through to env/file/default. The flag's own default is used only as a last resort — it loses even to `SetDefault`.
 - `flag.Changed == true` (flag was provided on the command line): viper treats the flag value as the highest-priority source.
 
 This means `viper.GetInt("port")` correctly returns the flag value when `--port 9090` is passed, and falls back to env `MYAPP_PORT` or config file `port: 8080` otherwise.

@@ -1,6 +1,6 @@
 # Plugin Ecosystem
 
-samber/ro ships 40+ plugins that extend the core library with domain-specific operators. Plugins are separate Go modules — install only what you need.
+samber/ro ships 40+ plugins that extend the core library with domain-specific operators. Plugins are separate Go modules — install only what you need. They publish no tagged releases, so `go get` resolves a pseudo-version; commit it in `go.mod` rather than tracking `@latest`.
 
 ```bash
 go get github.com/samber/ro/plugins/<category>/<name>
@@ -56,10 +56,13 @@ parsed := ro.Pipe1(rawBytes, rojson.Unmarshal[MyStruct]())
 | ICS    | `plugins/ics`  | Parse iCal files into event streams   |
 
 ```go
-import rocron "github.com/samber/ro/plugins/cron"
+import (
+    "github.com/go-co-op/gocron/v2"
+    rocron "github.com/samber/ro/plugins/cron"
+)
 
-// Emit every day at midnight
-daily := rocron.Schedule("0 0 * * *")
+// Emit a rocron.ScheduleJob{Counter, Time} every day at midnight
+daily := rocron.NewScheduler(gocron.CronJob("0 0 * * *", false))
 ```
 
 ## Network and I/O
@@ -74,7 +77,7 @@ daily := rocron.Schedule("0 0 * * *")
 import rofsnotify "github.com/samber/ro/plugins/fsnotify"
 
 // Watch directory for changes
-events := rofsnotify.Watch("/var/log/app/")
+events := rofsnotify.NewFSListener("/var/log/app/")
 ro.Pipe1(events, ro.Filter(func(e fsnotify.Event) bool {
     return e.Op == fsnotify.Write
 })).Subscribe(ro.OnNext(func(e fsnotify.Event) {
@@ -97,10 +100,10 @@ ro.Pipe1(events, ro.Filter(func(e fsnotify.Event) bool {
 ```go
 import roslog "github.com/samber/ro/plugins/observability/slog"
 
-// Log all stream events via slog
+// Log all stream events via slog (the logger is passed by value)
 ro.Pipe1(
     dataStream,
-    roslog.Tap[Data](logger, slog.LevelInfo),
+    roslog.Log[Data](*slog.Default(), slog.LevelInfo),
 )
 ```
 
@@ -129,7 +132,7 @@ ro.Pipe1(
 import rosignal "github.com/samber/ro/plugins/signal"
 
 // Observable that emits on SIGTERM/SIGINT
-shutdown := rosignal.Notify(syscall.SIGTERM, syscall.SIGINT)
+shutdown := rosignal.NewSignalCatcher(syscall.SIGTERM, syscall.SIGINT)
 
 // Use as TakeUntil signal for graceful shutdown
 ro.Pipe1(workStream, ro.TakeUntil[Work, os.Signal](shutdown))

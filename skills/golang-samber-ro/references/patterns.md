@@ -16,17 +16,15 @@ Real-world patterns for building production reactive pipelines with samber/ro.
 
 ## Pattern 1: Remote Call with Retry and Timeout
 
-Wrap a remote call (HTTP, gRPC, database) with automatic retry, exponential backoff, timeout, and fallback.
+Wrap a remote call (HTTP, gRPC, database) with automatic retry, timeout, and fallback. `RetryConfig` supports a fixed delay only — put exponential backoff inside the call itself if you need it.
 
 ```go
 result := ro.Pipe3(
     fetchUser(userID),  // ro.Observable[User] — wraps your remote call
     ro.Timeout[User](5*time.Second),
     ro.RetryWithConfig[User](ro.RetryConfig{
-        Max:               3,
-        Delay:             500 * time.Millisecond,
-        BackoffMultiplier: 2.0,
-        MaxDelay:          5 * time.Second,
+        MaxRetries: 3,                      // 0 would retry forever
+        Delay:      500 * time.Millisecond, // fixed delay between attempts
     }),
     ro.Catch[User](func(err error) ro.Observable[User] {
         log.Printf("remote call failed after retries: %v, using cache", err)
@@ -45,15 +43,20 @@ Share a single long-lived connection (WebSocket, SSE, message queue) across mult
 
 ```go
 // Cold observable wrapping any event stream source
-eventStream := ro.NewObservable[TickerEvent](func(ctx context.Context, obs ro.Observer[TickerEvent]) error {
+eventStream := ro.NewObservableWithContext(func(ctx context.Context, obs ro.Observer[TickerEvent]) ro.Teardown {
     // connect to your stream source (WebSocket, NATS, Kafka, etc.)
-    for {
-        event, err := streamSource.Read(ctx)
-        if err != nil {
-            return err
+    ctx, cancel := context.WithCancel(ctx)
+    go func() {
+        for {
+            event, err := streamSource.Read(ctx)
+            if err != nil {
+                obs.ErrorWithContext(ctx, err)
+                return
+            }
+            obs.NextWithContext(ctx, event)
         }
-        obs.Next(event)
-    }
+    }()
+    return func() { cancel() } // teardown: runs when the last subscriber leaves
 })
 
 // Share: one connection, multiple consumers
@@ -170,8 +173,8 @@ resilient := ro.Pipe3(
     primaryDataSource,
     // Strategy 1: retry transient failures
     ro.RetryWithConfig[Data](ro.RetryConfig{
-        Max:   2,
-        Delay: time.Second,
+        MaxRetries: 2,
+        Delay:      time.Second,
     }),
     // Strategy 2: fall back to secondary source
     ro.Catch[Data](func(err error) ro.Observable[Data] {
@@ -193,11 +196,11 @@ React to file changes with debouncing.
 import rofsnotify "github.com/samber/ro/plugins/fsnotify"
 
 watcher := ro.Pipe3(
-    rofsnotify.Watch("/etc/app/config/"),
+    rofsnotify.NewFSListener("/etc/app/config/"),
     ro.Filter(func(e fsnotify.Event) bool {
         return e.Op&fsnotify.Write != 0
     }),
-    ro.ThrottleTime[fsnotify.Event](2*time.Second), // debounce rapid saves
+    ro.ThrottleTime[fsnotify.Event](2*time.Second), // collapse rapid saves; keeps the first event of a burst (ro has no trailing debounce)
     ro.Map(func(e fsnotify.Event) Config {
         return reloadConfig(e.Name)
     }),
@@ -218,7 +221,7 @@ Use context or signal observable to cleanly terminate infinite streams.
 import rosignal "github.com/samber/ro/plugins/signal"
 
 // Method 1: OS signal
-shutdown := rosignal.Notify(syscall.SIGTERM, syscall.SIGINT)
+shutdown := rosignal.NewSignalCatcher(syscall.SIGTERM, syscall.SIGINT)
 
 sub := ro.Pipe1(
     workStream,
@@ -250,13 +253,13 @@ Full production pipeline with observability at each stage.
 ```go
 import roslog "github.com/samber/ro/plugins/observability/slog"
 
-pipeline := ro.Pipe5(
+pipeline := ro.Pipe8(
     eventSource,
     ro.TapOnSubscribe[Event](func() {
         slog.Info("pipeline started")
     }),
     ro.Filter(func(e Event) bool { return e.Valid() }),
-    roslog.TapOnNext[Event](logger, slog.LevelDebug), // log each event
+    roslog.Log[Event](*logger, slog.LevelDebug), // log each event (takes slog.Logger by value)
     ro.Map(enrichEvent),
     ro.BufferWithTimeOrCount[EnrichedEvent](50, 10*time.Second),
     ro.MapErr(func(batch []EnrichedEvent) (Result, error) {
@@ -266,6 +269,6 @@ pipeline := ro.Pipe5(
         slog.Error("pipeline error", "err", err)
         metrics.IncrCounter("pipeline.errors", 1)
     }),
-    ro.RetryWithConfig[Result](ro.RetryConfig{Max: 3, Delay: time.Second}),
+    ro.RetryWithConfig[Result](ro.RetryConfig{MaxRetries: 3, Delay: time.Second}),
 )
 ```

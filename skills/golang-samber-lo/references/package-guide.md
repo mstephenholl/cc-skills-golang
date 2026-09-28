@@ -48,15 +48,15 @@ active := lo.Filter(users, func(u User, _ int) bool {
 
 ## `lo/parallel` (lop) — Concurrent Transforms
 
-Parallel variants of core functions. Each element is processed in a separate goroutine with automatic worker pooling.
+Parallel variants of core functions. Each element runs in its own goroutine — there is no worker pool and no concurrency limit.
 
 **Available functions:** `Map`, `ForEach`, `Times`, `GroupBy`, `PartitionBy`
 
 **Characteristics:**
 
 - Results preserve original order despite concurrent execution
-- Internal goroutine pool manages concurrency (not configurable via API — one goroutine per element)
-- Synchronization via `sync.WaitGroup`
+- One goroutine per element, joined with `sync.WaitGroup` — a 1M-item slice starts 1M goroutines
+- No `context.Context` and no error return, so a slow or failing callback cannot be cancelled or reported
 
 **Use when:**
 
@@ -66,8 +66,8 @@ Parallel variants of core functions. Each element is processed in a separate gor
 
 **Do NOT use when:**
 
-- Small datasets (<100 items) — goroutine creation overhead exceeds benefit
-- I/O-bound work (HTTP calls, DB queries) — use `errgroup` with context cancellation instead
+- Small datasets with cheap callbacks — goroutine creation overhead exceeds the benefit
+- I/O-bound work (HTTP calls, DB queries) — use `errgroup` with `SetLimit` and context cancellation instead
 - Transform function is trivial (field access, type cast) — `lo.Map` is faster
 
 ```go
@@ -83,13 +83,14 @@ parsed := lop.Map(rawDocs, func(doc []byte, _ int) *Document {
 
 Modify the original slice directly. Zero allocation overhead.
 
-**Available functions:** `Filter`, `Map`, `Shuffle`, `Reverse`, `Replace`
+**Available functions:** `Filter`, `FilterI`, `Map`, `MapI`, `Fill`, `Shuffle`, `Reverse`
 
 **Characteristics:**
 
 - Modifies the input slice — callers must expect side effects
 - `lom.Filter` shortens the slice (removes non-matching elements in-place)
-- `lom.Map` transforms elements in-place (preserves length)
+- `lom.Map` transforms elements in-place (same element type, same length) and returns nothing
+- `lom.Filter` and `lom.Map` callbacks take only the item; the `…I` variants add the index
 - Uses Fisher-Yates for `Shuffle`
 - Not safe for concurrent access to the source slice
 
@@ -107,7 +108,7 @@ Modify the original slice directly. Zero allocation overhead.
 
 ```go
 // In-place filter — modifies 'items' directly
-items = lom.Filter(items, func(item Item, _ int) bool {
+items = lom.Filter(items, func(item Item) bool {
     return item.Price > 0
 })
 ```
@@ -120,10 +121,10 @@ Go 1.23+ iterator support with lazy evaluation. Transforms are deferred until co
 
 **Characteristics:**
 
-- Uses `range`-over-func (Go 1.23+)
+- Uses `range`-over-func (Go 1.23+); functions take and return `iter.Seq`, so wrap a slice with `slices.Values(s)`
 - Composable pipelines: `loi.Map` → `loi.Filter` → `loi.Take` runs as a single pass
 - No intermediate slice allocations between pipeline stages
-- Modules: `channel`, `find`, `intersect`, `map`, `math`, `seq`, `string`, `tuples`, `type_manipulation`
+- Covers the same domains as `lo`: channel, find, intersect, map, math, seq, string, tuples, type manipulation
 
 **Use when:**
 
@@ -140,7 +141,7 @@ Go 1.23+ iterator support with lazy evaluation. Transforms are deferred until co
 ```go
 // Lazy pipeline — no intermediate slices allocated
 for name := range loi.Map(
-    loi.Filter(users, func(u User) bool { return u.Active }),
+    loi.Filter(slices.Values(users), func(u User) bool { return u.Active }),
     func(u User) string { return u.Name },
 ) {
     fmt.Println(name)
@@ -149,11 +150,11 @@ for name := range loi.Map(
 
 ## `lo/exp/simd` — Experimental SIMD
 
-SIMD (Single Instruction Multiple Data) optimized operations for numeric types on amd64.
+SIMD-accelerated versions of a few numeric helpers (`Sum`, `SumBy`, `Mean`, `MeanBy`, `Min`, `Max`, `Clamp`, `Contains`).
 
 **Use when:** Bulk numeric operations after benchmarking confirms the bottleneck. Very specialized.
 
-**Warning:** This package is experimental and not covered by semver stability guarantees, so its API may break between minor versions. Do not use in production without version pinning.
+**Warning:** This is a separate module with no tagged releases (pseudo-versions only), and it is not covered by semver stability guarantees, so its API may break between commits — pin the exact pseudo-version. It builds only with `GOEXPERIMENT=simd`; without it the package compiles to an empty stub. Its Go floor and architecture support have moved between commits (amd64-only on Go 1.25 earlier, portable on Go 1.27+ later), so read its `go.mod` and README for the commit you pin. On hardware without SIMD support it falls back to the scalar `lo` functions.
 
 ## Decision Flowchart
 
@@ -183,4 +184,4 @@ Start with lo.Map/Filter/Reduce (immutable, safe)
 | Input modified | No | No | Yes | No | Varies |
 | Concurrent-safe | Read-safe | Read-safe | Not safe | Read-safe | Varies |
 | API stability | Stable | Stable | Stable | Stable | Experimental |
-| Go version | 1.18+ | 1.18+ | 1.18+ | 1.23+ | 1.25+ |
+| Go version | 1.18+ | 1.18+ | 1.18+ | 1.23+ | See its `go.mod` + `GOEXPERIMENT=simd` |

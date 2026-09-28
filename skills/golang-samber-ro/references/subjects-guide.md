@@ -1,6 +1,6 @@
 # Subjects Guide
 
-Subjects are both Observable and Observer — they can receive values (via `Send`, `Error`, `Complete`) and be subscribed to. Subjects are natively **hot**: subscribers share a single execution, and late subscribers only see future emissions (unless replay is configured).
+Subjects are both Observable and Observer — they can receive values (via `Next`, `Error`, `Complete`) and be subscribed to. Subjects are natively **hot**: subscribers share a single execution, and late subscribers only see future emissions (unless replay is configured).
 
 ## Table of Contents
 
@@ -42,14 +42,14 @@ subject.Subscribe(ro.OnNext(func(s string) {
     fmt.Println("sub1:", s)
 }))
 
-subject.Send("hello")  // sub1 sees this
+subject.Next("hello")  // sub1 sees this
 
 // Subscriber 2 (late)
 subject.Subscribe(ro.OnNext(func(s string) {
     fmt.Println("sub2:", s)
 }))
 
-subject.Send("world")  // both see this
+subject.Next("world")  // both see this
 subject.Complete()
 ```
 
@@ -67,7 +67,7 @@ subject.Subscribe(ro.OnNext(func(v int) {
     fmt.Println("sub1:", v) // 0, then 42
 }))
 
-subject.Send(42)
+subject.Next(42)
 
 // Subscriber 2 immediately receives 42 (latest value)
 subject.Subscribe(ro.OnNext(func(v int) {
@@ -84,10 +84,10 @@ Buffers the last **N values** and replays them to every new subscriber.
 ```go
 subject := ro.NewReplaySubject[string](3) // buffer size = 3
 
-subject.Send("a")
-subject.Send("b")
-subject.Send("c")
-subject.Send("d") // "a" evicted from buffer
+subject.Next("a")
+subject.Next("b")
+subject.Next("c")
+subject.Next("d") // "a" evicted from buffer
 
 // Late subscriber receives "b", "c", "d" (last 3)
 subject.Subscribe(ro.OnNext(func(s string) {
@@ -110,9 +110,9 @@ subject.Subscribe(ro.NewObserver(
     func() { fmt.Println("done") },
 ))
 
-subject.Send(1)
-subject.Send(2)
-subject.Send(3)
+subject.Next(1)
+subject.Next(2)
+subject.Next(3)
 subject.Complete() // triggers emission of 3, then "done"
 ```
 
@@ -125,14 +125,14 @@ Allows exactly **one subscriber**. Buffers values internally until that subscrib
 ```go
 subject := ro.NewUnicastSubject[int](100) // buffer size
 
-subject.Send(1) // buffered
-subject.Send(2) // buffered
+subject.Next(1) // buffered
+subject.Next(2) // buffered
 
 // Single subscriber receives buffered + future values
 subject.Subscribe(ro.OnNext(func(v int) {
     fmt.Println(v) // 1, 2, then future values
 }))
-// Second subscribe would panic or error
+// A second subscriber immediately receives ErrUnicastSubjectConcurrent via onError
 ```
 
 **Use when:** single consumer with buffering — job queues, request pipelines where exactly one handler processes events.
@@ -175,7 +175,8 @@ connectable.Subscribe(observer1)
 connectable.Subscribe(observer2)
 
 // Start the shared execution explicitly
-sub, err := connectable.Connect(ctx)
+sub := connectable.Connect() // or connectable.ConnectWithContext(ctx)
+defer sub.Unsubscribe()
 ```
 
 ## Subject Decision Table
@@ -192,8 +193,8 @@ sub, err := connectable.Connect(ctx)
 
 | Mistake | Why | Fix |
 | --- | --- | --- |
-| Calling `Send()` after `Complete()` | Values are silently dropped — the subject is terminal | Track lifecycle, don't reuse completed subjects |
+| Calling `Next()` after `Complete()` | Values are silently dropped — the subject is terminal | Track lifecycle, don't reuse completed subjects |
 | Using PublishSubject when late subscribers need history | Late subscribers miss all prior events | Use BehaviorSubject (last 1) or ReplaySubject (last N) |
 | Using ReplaySubject with unbounded buffer | Memory grows without limit | Set an explicit `bufferSize` |
-| Multiple subscribers on UnicastSubject | Panics or undefined behavior | Use PublishSubject for multicast, UnicastSubject for single consumer |
+| Multiple subscribers on UnicastSubject | Every subscriber after the first receives `ErrUnicastSubjectConcurrent` and no values | Use PublishSubject for multicast, UnicastSubject for single consumer |
 | Not calling `Complete()` on subjects | Subscribers wait forever, goroutine leak | Always `Complete()` or `Error()` when the source is done |

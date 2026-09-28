@@ -67,11 +67,11 @@ Create observables from various sources. Typically the first argument to `Pipe`.
 
 ```go
 // Custom observable with direct control
-obs := ro.NewObservable[int](func(ctx context.Context, observer ro.Observer[int]) error {
+obs := ro.NewObservable(func(observer ro.Observer[int]) ro.Teardown {
     observer.Next(1)
     observer.Next(2)
     observer.Complete()
-    return nil
+    return nil // or a func() that releases resources on unsubscribe
 })
 ```
 
@@ -201,18 +201,18 @@ ro.CombineLatest2(priceStream, quantityStream)
 | `OnErrorReturn[T](value T)` | Replace error with fallback value |
 | `OnErrorResumeNextWith[T](obs ...Observable[T])` | Continue with fallback observables on error |
 | `Retry[T]()` | Retry indefinitely on error |
-| `RetryWithConfig[T](cfg RetryConfig)` | Retry with max attempts, delay, backoff |
+| `RetryWithConfig[T](cfg RetryConfig)` | Retry with max attempts and a fixed delay |
 | `ThrowIfEmpty[T](fn func() error)` | Error if stream completes empty |
 
 ```go
-// RetryConfig for exponential backoff
 ro.RetryWithConfig[Response](ro.RetryConfig{
-    Max:               3,
-    Delay:             time.Second,
-    BackoffMultiplier: 2.0,
-    MaxDelay:          10 * time.Second,
+    MaxRetries:     3,           // 0 means retry forever, like Retry()
+    Delay:          time.Second, // fixed wait between attempts
+    ResetOnSuccess: true,        // reset the counter after each emitted value
 })
 ```
+
+`RetryConfig` has only these three fields — there is no backoff multiplier or max delay. For exponential backoff, implement it in the source: `RetryWithConfig` re-subscribes on every attempt, so a `ro.Defer` factory runs once per attempt and can count attempts and sleep for the growing delay. Place retry before any fallback (`Catch`, `OnErrorResumeNextWith`, `OnErrorReturn`), since a fallback placed first swallows the error the retry needs to see.
 
 ## Timing and Buffering
 
@@ -317,8 +317,7 @@ observer := ro.NoopObserver[T]()   // discard all events
 sub := observable.Subscribe(observer)
 sub.Wait()          // block until complete or error
 sub.Unsubscribe()   // cancel and cleanup
-sub.IsActive()      // check if still running
-sub.GetError()      // get terminal error
+sub.IsClosed()      // true once completed, errored or unsubscribed
 ```
 
 ## Scheduling
@@ -338,6 +337,6 @@ ro.NewSafeObservable[T](fn)
 // Unsafe: no synchronization, caller must guarantee single-goroutine access
 ro.NewUnsafeObservable[T](fn)
 
-// Eventually safe: allows brief unsynchronized period, then synchronizes
+// Eventually safe: safe for concurrent use, but messages sent concurrently are dropped
 ro.NewEventuallySafeObservable[T](fn)
 ```

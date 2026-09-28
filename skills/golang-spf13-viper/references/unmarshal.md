@@ -5,7 +5,8 @@
 - [Basic Unmarshal](#basic-unmarshal)
 - [mapstructure tags](#mapstructure-tags)
 - [UnmarshalKey — extracting a sub-tree](#unmarshalkey--extracting-a-sub-tree)
-- [time.Duration](#timeduration)
+- [Env-only keys are invisible to Unmarshal](#env-only-keys-are-invisible-to-unmarshal)
+- [Default decode hooks](#default-decode-hooks)
 - [net.IP and custom types](#netip-and-custom-types)
 - [Squash for embedded structs](#squash-for-embedded-structs)
 - [Remain for unknown keys](#remain-for-unknown-keys)
@@ -70,31 +71,42 @@ if err := viper.UnmarshalKey("database", &dbCfg); err != nil {
 
 Prefer `UnmarshalKey` over `viper.Sub` + `Unmarshal` — fewer nil checks and less boilerplate.
 
-## time.Duration
+## Env-only keys are invisible to Unmarshal
 
-Viper's `GetDuration` parses duration strings (`"1h30m"`, `"500ms"`) from config files and env vars. When using `Unmarshal`, mapstructure does not know how to decode a duration string into `time.Duration` by default.
-
-Register a decode hook:
+`Unmarshal` decodes only the keys viper already knows — keys from a config file, `SetDefault`, `BindEnv` or a bound flag. `AutomaticEnv` makes `Get` consult the environment but registers no keys, so with no config entry for `enabled`, `MYAPP_ENABLED=true` gives `viper.GetBool("enabled") == true` while `Unmarshal` leaves `cfg.Enabled` false.
 
 ```go
-import "github.com/mitchellh/mapstructure"
+// ✓ Register every key that may come only from env
+viper.SetDefault("enabled", false)
+viper.BindEnv("database.password") // honours prefix and replacer
 
-var cfg Config
+// ✓ Or let viper derive keys from the struct (experimental, v1.20+)
+v := viper.NewWithOptions(viper.ExperimentalBindStruct())
+```
+
+## Default decode hooks
+
+Viper's default decoder config already includes `StringToTimeDurationHookFunc()` (`"1h30m"` → `time.Duration`), a comma-splitting string → slice hook (`"a,b"` → `[]string{"a", "b"}`), and `WeaklyTypedInput: true` (`"true"` → `bool`, `"8080"` → `int`). Tagged `time.Duration`, slice and bool fields therefore decode without extra configuration.
+
+Passing `viper.DecodeHook(h)` to `Unmarshal`, `viper.WithDecodeHook(h)` to `NewWithOptions`, or assigning `dc.DecodeHook` replaces those defaults instead of appending — with only an IP hook, `timeout: 30s` fails with `'timeout' cannot parse value as 'time.Duration'`. Compose with the existing `dc.DecodeHook` inside a decoder option (below), or list `StringToTimeDurationHookFunc()` and `StringToSliceHookFunc(",")` yourself when using `DecodeHook` / `WithDecodeHook`. Since viper v1.20 the package is `github.com/go-viper/mapstructure/v2`; the archived `github.com/mitchellh/mapstructure` types don't match viper's `DecoderConfigOption` and fail to compile.
+
+```go
+import "github.com/go-viper/mapstructure/v2"
+
 err := viper.Unmarshal(&cfg, func(dc *mapstructure.DecoderConfig) {
     dc.DecodeHook = mapstructure.ComposeDecodeHookFunc(
-        mapstructure.StringToTimeDurationHookFunc(),
-        mapstructure.StringToSliceHookFunc(","),
-        dc.DecodeHook,
+        dc.DecodeHook,                         // keep viper's duration/slice hooks
+        mapstructure.StringToIPHookFunc(),     // add net.IP
     )
 })
 ```
 
-`StringToTimeDurationHookFunc` handles `"1h30m"` → `time.Duration`. `StringToSliceHookFunc(",")` handles `"a,b,c"` → `[]string{"a", "b", "c"}`.
-
 ## net.IP and custom types
 
+mapstructure v2 ships hooks for `net.IP`, `net.IPNet`, `netip.Addr`, `netip.AddrPort` and `netip.Prefix`. Write your own only for domain types:
+
 ```go
-import "github.com/mitchellh/mapstructure"
+import "github.com/go-viper/mapstructure/v2"
 
 func stringToIPHookFunc() mapstructure.DecodeHookFunc {
     return func(f reflect.Type, t reflect.Type, data interface{}) (interface{}, error) {
@@ -139,13 +151,10 @@ Extra keys from the config file are collected in `Remain` instead of being silen
 
 ## Weak decoding
 
-Enable weak type decoding (e.g., string `"true"` → bool `true`) when working with env vars that are always strings:
+Viper enables `WeaklyTypedInput` by default, so env strings decode into bools and numbers. Turn it off for strict decoding when a silently converted value would hide a config typo:
 
 ```go
-var cfg Config
 err := viper.Unmarshal(&cfg, func(dc *mapstructure.DecoderConfig) {
-    dc.WeaklyTypedInput = true
+    dc.WeaklyTypedInput = false
 })
 ```
-
-Use with caution — weak decoding can hide bugs where a wrong value type is silently converted.

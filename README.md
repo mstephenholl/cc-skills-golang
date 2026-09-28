@@ -211,7 +211,7 @@ These skills are designed as **atomic, cross-referencing units**. A skill may re
 | ⭐️ | ✅ `golang-troubleshooting` | ⚡ 🧠 🤖 | -32% | 103 | 2,414 | 17,456 |
 | ⭐️ | ✅ `golang-security` | ⚡ 🧠 🤖 | -32% | 131 | 2,768 | 23,032 |
 |  | ✅ `golang-benchmark` | ⚡ 🧠 | -50% | 83 | 2,356 | 33,468 |
-|  | ✅ `golang-cli` | ⚡ | -43% | 111 | 2,324 | 6,139 |
+|  | ✅ `golang-cli` | ⚡ | -43% | 111 | 1,711 | 5,526 |
 |  | ✅ `golang-concurrency` | ⚡ 🤖 ⚙️ | -39% | 110 | 1,906 | 7,006 |
 |  | ✅ `golang-context` | ⚡ ⚙️ | -34% | 82 | 1,044 | 4,107 |
 |  | ✅ `golang-continuous-integration` | ⚡ | -59% | 123 | 2,896 | 12,376 |
@@ -232,20 +232,20 @@ These skills are designed as **atomic, cross-referencing units**. A skill may re
 | Skill | Flags | Error rate gap | Description (tok) | SKILL.md (tok) | Directory (tok) |
 | --- | --- | --- | --- | --- | --- |
 | ✅ `golang-google-wire` | ⚡ | -16% | 89 | 2,153 | 7,239 |
-| ✅ `golang-graphql` |  | -16% | 78 | 3,129 | 8,423 |
-| ✅ `golang-grpc` | ⚡ | -41% | 68 | 2,341 | 5,440 |
-| ✅ `golang-spf13-cobra` | ⚡ | — | 118 | 2,524 | 7,925 |
-| ✅ `golang-spf13-viper` | ⚡ | — | 105 | 2,495 | 7,586 |
-| ✅ `golang-swagger` | ⚡ | — | 67 | 2,268 | 3,408 |
+| ✅ `golang-graphql` |  | -16% | 78 | 2,989 | 8,305 |
+| ✅ `golang-grpc` | ⚡ | -41% | 68 | 1,977 | 5,101 |
+| ✅ `golang-spf13-cobra` | ⚡ | — | 118 | 1,844 | 7,643 |
+| ✅ `golang-spf13-viper` | ⚡ | — | 105 | 2,270 | 8,280 |
+| ✅ `golang-swagger` | ⚡ | — | 67 | 2,275 | 3,564 |
 | ✅ `golang-uber-dig` | ⚡ | -10% | 84 | 1,945 | 5,972 |
 | ✅ `golang-uber-fx` | ⚡ | -5% | 78 | 2,261 | 6,941 |
 | ✅ `golang-samber-do` | ⚡ | -81% | 72 | 1,722 | 3,787 |
-| ✅ `golang-samber-hot` | ⚡ | -54% | 101 | 1,970 | 7,904 |
-| ✅ `golang-samber-lo` | ⚡ | -40% | 96 | 2,541 | 10,739 |
-| ✅ `golang-samber-mo` | ⚡ 🧠 | -48% | 100 | 2,987 | 12,773 |
-| ✅ `golang-samber-oops` | ⚡ | -59% | 70 | 2,621 | 2,933 |
-| ✅ `golang-samber-ro` | ⚡ 🧠 | -50% | 104 | 2,928 | 11,840 |
-| ✅ `golang-samber-slog` | ⚡ | -19% | 104 | 3,154 | 10,660 |
+| ✅ `golang-samber-hot` | ⚡ | -54% | 101 | 1,986 | 7,940 |
+| ✅ `golang-samber-lo` | ⚡ | -40% | 96 | 1,886 | 10,458 |
+| ✅ `golang-samber-mo` | ⚡ | -48% | 100 | 1,938 | 12,017 |
+| ✅ `golang-samber-oops` | ⚡ | -59% | 70 | 1,450 | 3,514 |
+| ✅ `golang-samber-ro` | ⚡ | -50% | 104 | 1,890 | 11,104 |
+| ✅ `golang-samber-slog` | ⚡ | -19% | 104 | 2,991 | 10,497 |
 | ❌ `golang-temporal` |  | — | 0 | 0 | 0 |
 | ✅ `golang-stretchr-testify` | ⚡ | -47% | 72 | 2,143 | 2,962 |
 

@@ -202,12 +202,12 @@
       "id": 16,
       "name": "lo-zero-dependencies",
       "prompt": "My team is concerned about adding samber/lo as a dependency. They worry about transitive dependencies and supply chain risk. What dependencies does samber/lo pull in?",
-      "expected_output": "Should state that samber/lo has zero external runtime dependencies — it relies only on Go's standard library.",
+      "expected_output": "Should state that samber/lo's only dependency beyond the standard library is golang.org/x/text, a Go-project module used only by lo.Capitalize — every other helper runs on the standard library alone, so the supply-chain footprint is one Go-team module and no third-party code.",
       "assertions": [
-        {"text": "States that samber/lo has zero external/runtime dependencies", "type": "semantic"},
-        {"text": "Mentions it relies only on Go's standard library", "type": "semantic"},
+        {"text": "Identifies golang.org/x/text as the only module samber/lo requires beyond the standard library", "type": "semantic"},
+        {"text": "Explains that golang.org/x/text is maintained by the Go project and is used only by lo's string case helper (lo.Capitalize), so every other helper relies on the standard library alone", "type": "semantic"},
         {"text": "Addresses the supply chain concern by noting minimal transitive dependency risk", "type": "semantic"},
-        {"text": "Does NOT claim lo has external dependencies", "type": "semantic"}
+        {"text": "Describes lo's dependency footprint as a single Go-project module with no third-party dependencies, rather than as zero dependencies", "type": "semantic"}
       ]
     },
     {
