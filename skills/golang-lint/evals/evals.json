@@ -261,7 +261,7 @@
     "assertions": [
       {
         "id": "10.1",
-        "text": "For deadline exceeded: recommends increasing run.timeout in .golangci.yml (default is 5m, may need 10m+ for large repos)"
+        "text": "For deadline exceeded: raises `run.timeout` explicitly in .golangci.yml (v2 has no default timeout)"
       },
       {
         "id": "10.2",

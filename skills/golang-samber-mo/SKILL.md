@@ -6,7 +6,7 @@ license: MIT
 compatibility: Designed for Claude Code, Codex or similar harness, and for projects using Golang.
 metadata:
   author: samber
-  version: "1.1.4"
+  version: "1.1.5"
   openclaw:
     emoji: "🎭"
     homepage: https://github.com/samber/cc-skills-golang
@@ -56,7 +56,7 @@ go get github.com/samber/mo
 - **Reach for mo when steps chain** — for a single fallible call with no follow-up, plain `if err != nil` is clearer than a `Result`.
 - **Use `Option` only when absence carries meaning** — a `count` where `0` means "no items" stays `int`; a `nickname` where "not set" differs from `""` becomes `Option[string]`.
 - **Keep `(T, error)` in exported signatures** — convert with `mo.TupleToResult(f())` on entry and `.Get()` on exit, so callers never need mo to call your API.
-- **Keep `MustGet` inside `mo.Do`** — `Do` turns the panic into an `Err`; elsewhere `MustGet` crashes on `None`/`Err`. `Do` recovers every panic, not only `MustGet`'s, so a nil dereference inside it silently becomes an `Err`.
+- **Keep `MustGet` inside `mo.Do`** — `Do` turns the panic into an `Err`; elsewhere `MustGet` crashes on `None`/`Err`. `Do` recovers every panic, not only `MustGet`'s, so a nil dereference inside it silently becomes an `Err`. Reach for it when combining several Options and Results — the block reads as straight-line code instead of nested `FlatMap` chains.
 
 ## Methods Cannot Change the Type Parameter
 

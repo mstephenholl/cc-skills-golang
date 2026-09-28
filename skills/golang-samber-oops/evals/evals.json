@@ -98,11 +98,11 @@
   {
     "id": 8,
     "name": "accessing-oops-error-info",
-    "description": "Tests knowledge of the OopsError type assertion to access structured fields",
+    "description": "Tests knowledge of extracting an OopsError with oops.AsOops to access structured fields",
     "prompt": "I receive an error from a lower layer that was created with samber/oops. I need to extract the error code, domain, tags, and context map from it in my error handler middleware. How do I access this information?",
-    "trap": "Model may try to use string parsing or fmt.Sprintf to extract information instead of type-asserting to oops.OopsError",
+    "trap": "Model may try to use string parsing or fmt.Sprintf to extract information instead of extracting oops.OopsError with oops.AsOops",
     "assertions": [
-      {"id": "8.1", "text": "Type-asserts the error to oops.OopsError"},
+      {"id": "8.1", "text": "Extracts the oops.OopsError with oops.AsOops(err) (or errors.As), not a bare type assertion"},
       {"id": "8.2", "text": "Uses .Code() method to get the error code"},
       {"id": "8.3", "text": "Uses .Domain() method to get the domain"},
       {"id": "8.4", "text": "Uses .Tags() method to get the tags"},

@@ -6,7 +6,7 @@ license: MIT
 compatibility: Designed for Claude Code, Codex or similar harness, and for projects using Golang.
 metadata:
   author: samber
-  version: "1.1.4"
+  version: "1.1.5"
   openclaw:
     emoji: "🔧"
     homepage: https://github.com/samber/cc-skills-golang
@@ -85,7 +85,7 @@ viper.AutomaticEnv()
 
 ## Flag binding (the cobra seam)
 
-Viper reads a bound flag's value and `Changed` state lazily, at each `Get` or `Unmarshal`, so the binding only has to exist before the first read — which rules out binding in `RunE` when `PersistentPreRunE` already unmarshaled the config. Bind each key once: when several subcommands bind their own local `--port` to the same key in `init()`, the last `BindPFlag` wins for every command, so bind those in the command's own `PreRunE`.
+Viper reads a bound flag's value and `Changed` state lazily, at each `Get` or `Unmarshal`, so the binding only has to exist before the first read — cobra runs the root's `PersistentPreRunE` before the command's `PreRunE` and `RunE`, so binding in either is too late once that hook unmarshals the config. Bind in `init()`, or in the root's `PersistentPreRunE` via `cmd.Flags().Lookup(...)`, before anything reads or unmarshals the key. Bind each key once: when several subcommands bind their own local `--port` to the same key in `init()`, the last `BindPFlag` wins for every command, so bind those in the root's `PersistentPreRunE`, where `cmd` is the command actually running.
 
 ## Unmarshaling into structs
 

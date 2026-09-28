@@ -16,10 +16,10 @@
     {
       "id": 2,
       "prompt": "Our GET /settings endpoint returns a dynamic set of feature flags as a map: `map[string]bool`. Document this endpoint for Swagger so the response schema is visible in the UI.",
-      "expected_output": "Defines a named struct for the response or uses swaggertype annotation — swag cannot generate a schema for map[string]bool directly. The trap is using `{object} map[string]bool` in @Success which fails generation.",
+      "expected_output": "Defines a named response type — a named struct, a named map type (e.g. `type FeatureFlags map[string]bool`), or a swaggertype override. The trap is using `{object} map[string]bool` in @Success, which generates only an anonymous additionalProperties object that documents nothing.",
       "assertions": [
         "Does NOT use `{object} map[string]bool` directly in @Success",
-        "Defines a named struct for the response OR acknowledges a swaggertype workaround is needed",
+        "Defines a named response type — a named struct, a named map type (e.g. `type FeatureFlags map[string]bool`), or a swaggertype override",
         "@Success annotation uses a named type (not a raw map literal)",
         "@Router annotation is present with [get] method",
         "@Produce annotation specifies json"

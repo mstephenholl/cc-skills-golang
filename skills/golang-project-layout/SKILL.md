@@ -6,7 +6,7 @@ license: MIT
 compatibility: Designed for Claude Code, Codex or similar harness, and for projects using Golang.
 metadata:
   author: samber
-  version: "1.4.5"
+  version: "1.4.6"
   openclaw:
     emoji: "📁"
     homepage: https://github.com/samber/cc-skills-golang
@@ -27,7 +27,7 @@ allowed-tools: Read Edit Write Glob Grep Bash(go:*) Bash(golangci-lint:*) Bash(g
 
 Right-size before structuring — a 100-line CLI or a small library needs no layers of abstraction or dependency injection.
 
-- **Services and applications** (HTTP API, worker, multi-binary app) where the user hasn't stated a preference: ask which architecture they want (clean, hexagonal, DDD, flat) and how large they expect it to grow, then which DI approach — manual constructor injection, a DI library (samber/do, google/wire, uber-go/dig+fx), or none. The DI choice decides how services are wired and how lifecycle (health checks, graceful shutdown) is managed.
+- **When starting a new service or application** (HTTP API, worker, multi-binary app) where the user hasn't stated a preference: ask which architecture they want (clean, hexagonal, DDD, flat) and how large they expect it to grow, then which DI approach — manual constructor injection, a DI library (samber/do, google/wire, uber-go/dig+fx), or none. The DI choice decides how services are wired and how lifecycle (health checks, graceful shutdown) is managed.
 - **Everything else** — CLIs, libraries, scripts, or a service whose request already states its shape: default to a flat structure with manual constructor wiring, and say so in one line so the user can redirect.
 
 → See `samber/cc-skills-golang@golang-design-patterns` skill for architecture guides with file trees, and `samber/cc-skills-golang@golang-dependency-injection` skill for the DI comparison and decision table.

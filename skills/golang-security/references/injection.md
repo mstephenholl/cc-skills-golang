@@ -76,8 +76,14 @@ With `sqlx`:
 
 ```go
 query, args, err := sqlx.In("SELECT * FROM users WHERE id IN (?)", ids)
+if err != nil {
+    return nil, fmt.Errorf("expanding IN clause: %w", err) // an empty ids slice fails here
+}
 query = db.Rebind(query) // converts ? to $1,$2,... for postgres
-rows, err := db.Query(query, args...)
+var users []User
+if err := db.SelectContext(ctx, &users, query, args...); err != nil {
+    return nil, fmt.Errorf("selecting users: %w", err)
+}
 ```
 
 ### Dynamic column names and ORDER BY

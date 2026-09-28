@@ -6,8 +6,9 @@ import (
 	"github.com/spf13/cobra"
 )
 
-// Cobra provides built-in validators for positional arguments.
-// See the table in SKILL.md for all available validators.
+// Cobra provides built-in validators for positional arguments: NoArgs, ArbitraryArgs,
+// ExactArgs, MinimumNArgs, MaximumNArgs, RangeArgs and OnlyValidArgs (checks ValidArgs),
+// composable with MatchAll.
 var deployCmd = &cobra.Command{
 	Use:   "deploy [environment]",
 	Short: "Deploy to an environment",

@@ -6,7 +6,7 @@ license: MIT
 compatibility: Designed for Claude Code, Codex or similar harness, and for projects using Golang.
 metadata:
   author: samber
-  version: "1.3.5"
+  version: "1.3.6"
   openclaw:
     emoji: "📝"
     homepage: https://github.com/samber/cc-skills-golang
@@ -65,7 +65,7 @@ Read [references/code-comments.md](./references/code-comments.md) when writing o
 
 ## Project Type
 
-A **library** has no `main` package and is imported by others; an **application/CLI** has a `main` package or `cmd/` directory and ships a binary or image. A module can be both — importable `pkg/` packages get library docs, `cmd/` binaries get application docs, and `internal/` packages get doc comments only, since external users cannot import them.
+A **library** has no `main` package and is imported by others; an **application/CLI** has a `main` package or `cmd/` directory and ships a binary or image. A module can be both — importable `pkg/` packages get library docs, `cmd/` binaries get application docs, and `internal/` packages get doc comments only, since external users cannot import them. Application/CLI docs center on installation methods (prebuilt binaries, `go install`, Docker, Homebrew), `--help` text and configuration — users run the binary and never read its package API.
 
 ## Documentation Checklist
 

@@ -31,9 +31,10 @@ func init() {
 	rootCmd.AddCommand(versionCmd)
 }
 
-// Build with:
+// Build with — for package main the -X path is main.<var>, not the import path;
+// the linker silently ignores an unknown symbol and the binary ships "dev":
 //
-//   go build -ldflags "-X github.com/you/myapp/cmd/myapp.version=1.2.3 \
-//     -X github.com/you/myapp/cmd/myapp.commit=$(git rev-parse --short HEAD) \
-//     -X github.com/you/myapp/cmd/myapp.date=$(date -u +%Y-%m-%dT%H:%M:%SZ)" \
+//   go build -ldflags "-X main.version=1.2.3 \
+//     -X main.commit=$(git rev-parse --short HEAD) \
+//     -X main.date=$(date -u +%Y-%m-%dT%H:%M:%SZ)" \
 //     -o bin/myapp ./cmd/myapp

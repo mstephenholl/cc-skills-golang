@@ -6,7 +6,7 @@ license: MIT
 compatibility: Designed for Claude Code, Codex or similar harness, and for projects using Golang.
 metadata:
   author: samber
-  version: "1.3.4"
+  version: "1.3.5"
   openclaw:
     emoji: "🗄"
     homepage: https://github.com/samber/cc-skills-golang
@@ -37,7 +37,7 @@ Use `sqlx` or `pgx` on top of `database/sql` — never an ORM. When using sqlx o
 ## Rules
 
 1. **sqlx or pgx, not ORMs** — ORMs hide the SQL they generate (N+1 queries you cannot see in code), run magic hooks (`BeforeCreate`) that make debugging harder, couple migrations to application code, and their API is harder to learn than SQL.
-2. **Parameterize every value** — never concatenate input into SQL. Column names and `ORDER BY` targets cannot be placeholders, so check them against an allowlist before `fmt.Sprintf`. Expand `IN` lists with `sqlx.In`, then `db.Rebind` the query — `sqlx.In` emits `?`, which PostgreSQL rejects. → See `samber/cc-skills-golang@golang-security` skill for injection in depth.
+2. **Parameterize every value** — never concatenate input into SQL. Column names and `ORDER BY` targets cannot be placeholders, so check them against an allowlist that returns an error on a miss before `fmt.Sprintf`. Expand `IN` lists with `sqlx.In` and check its error (an empty slice fails), then `db.Rebind` the query — `sqlx.In` emits `?`, which PostgreSQL rejects — and pass the args it returned. → See `samber/cc-skills-golang@golang-security` skill for injection in depth.
 3. **Pass `ctx` to every call** through the `*Context` variants (`QueryContext`, `ExecContext`, `GetContext`, `SelectContext`) — without it a query keeps running after the client disconnects or the deadline passes.
 4. **`Exec` for statements that return no rows** — `Query` returns `*Rows`, which holds its connection until closed; a `DELETE` run through `Query` and never closed leaks a pool connection. Read the count from `RowsAffected()`.
 5. **Close rows, then check `rows.Err()`** — `defer rows.Close()` right after the `QueryContext` error check, and check `rows.Err()` after the loop, because a network or driver error ends `rows.Next()` early and the partial result looks complete.

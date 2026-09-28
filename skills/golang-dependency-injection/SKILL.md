@@ -6,7 +6,7 @@ license: MIT
 compatibility: Designed for Claude Code, Codex or similar harness, and for projects using Golang.
 metadata:
   author: samber
-  version: "1.3.4"
+  version: "1.3.5"
   openclaw:
     emoji: "🔌"
     homepage: https://github.com/samber/cc-skills-golang
@@ -88,9 +88,9 @@ Once a library is chosen, its skill owns the API:
 
 | Library | → See | What sets it apart |
 | --- | --- | --- |
-| google/wire | `samber/cc-skills-golang@golang-google-wire` skill | Injector files carry `//go:build wireinject`; `wire.Bind` maps interfaces; `wire_gen.go` is generated — regenerate it, never edit it |
+| google/wire | `samber/cc-skills-golang@golang-google-wire` skill | Injector files carry `//go:build wireinject` and list every provider in `wire.Build(...)`; `wire.Bind` maps interfaces; `wire_gen.go` is generated as plain constructor calls — regenerate it, never edit it |
 | uber-go/dig | `samber/cc-skills-golang@golang-uber-dig` skill | Reflection container without lifecycle; errors surface at `Invoke`, not compile time |
-| uber-go/fx | `samber/cc-skills-golang@golang-uber-fx` skill | Lifecycle through `lc.Append(fx.Hook{OnStart, OnStop})`, both taking a `context.Context` |
+| uber-go/fx | `samber/cc-skills-golang@golang-uber-fx` skill | Lifecycle through an `lc fx.Lifecycle` parameter injected into the provider, then `lc.Append(fx.Hook{OnStart, OnStop})`, both taking a `context.Context` |
 | samber/do | `samber/cc-skills-golang@golang-samber-do` skill | Generic providers, scopes, health checks, shutdown, and clone-and-override testing |
 
 ## Testing

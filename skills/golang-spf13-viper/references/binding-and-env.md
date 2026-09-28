@@ -88,7 +88,7 @@ viper.BindPFlags(rootCmd.PersistentFlags())
 
 **Timing rule:** Viper stores the `*pflag.Flag` and reads its `Changed` state and value lazily on every `Get`, so a binding made after parsing still works for later reads. What fails is reading before the binding exists — typically a `viper.Unmarshal` in the root's `PersistentPreRunE` while the subcommand binds in `RunE`. Bind in `init()` or `PersistentPreRunE`.
 
-**One binding per key:** `BindPFlag` overwrites any earlier binding for the same key. When two subcommands each define a local `--port` and bind it to `"port"` in `init()`, the last `init()` wins for every command — running the other subcommand with `--port 9090` reads an unchanged flag and falls through to env, file or defaults. Bind such flags in each command's `PreRunE`, which runs only for the executing command, or give them distinct keys.
+**One binding per key:** `BindPFlag` overwrites any earlier binding for the same key. When two subcommands each define a local `--port` and bind it to `"port"` in `init()`, the last `init()` wins for every command — running the other subcommand with `--port 9090` reads an unchanged flag and falls through to env, file or defaults. Bind such flags in the root's `PersistentPreRunE` via `cmd.Flags().Lookup(...)` — `cmd` is the command actually running — or give them distinct keys; a command's own `PreRunE` works only when nothing has read or unmarshaled the key before it runs.
 
 ## How pflag binding interacts with precedence
 

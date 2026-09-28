@@ -18,11 +18,11 @@
     "name": "router-firstmatch-vs-router-all-matches",
     "description": "Tests whether the model distinguishes Router (all matching) from Router+FirstMatch (first match only)",
     "prompt": "I have a slog-multi Router with two rules: (1) ERROR and above → PagerDuty, (2) WARN and above → Slack. My problem: ERROR logs are going to BOTH PagerDuty AND Slack. I only want errors in PagerDuty, not duplicated in Slack. How do I fix this with slog-multi?",
-    "trap": "Without the skill, the model adds a LevelIs(slog.LevelWarn) predicate to the Slack handler thinking that fixes it — but WARN and above includes ERROR, so errors still reach Slack. The correct fix is Router().Add(...).FirstMatch() so routing stops at the first matching handler.",
+    "trap": "Without the skill, the model keeps Slack's WARN-and-above predicate and reorders or tweaks the rules, but the default Router still sends each record to every matching handler. The correct fix is Router().Add(...).FirstMatch() so routing stops at the first matching handler (an exact LevelIs(slog.LevelWarn) predicate on Slack also works, since LevelIs matches only the listed levels).",
     "assertions": [
       {"id": "2.1", "text": "Identifies that the default Router sends to ALL matching handlers (both Slack and PagerDuty match for ERROR)"},
       {"id": "2.2", "text": "Recommends using .FirstMatch() on the Router to stop at the first matching handler"},
-      {"id": "2.3", "text": "Does NOT suggest just changing Slack's predicate to LevelIs(slog.LevelWarn) as the complete fix (errors still match WARN-and-above)"},
+      {"id": "2.3", "text": "Does NOT describe LevelIs(slog.LevelWarn) as matching WARN-and-above — LevelIs matches only the listed levels, so it keeps ERROR out of Slack (an alternative to FirstMatch, not a failed fix)"},
       {"id": "2.4", "text": "Shows the correct Router().Add(pagerduty, LevelIs(ERROR)).Add(slack, LevelIs(WARN)).FirstMatch().Handler() pattern"},
       {"id": "2.5", "text": "Explains the semantic difference: Router routes to ALL matches, FirstMatch routes to FIRST match only"}
     ]
@@ -48,7 +48,7 @@
     "prompt": "I've set up ThresholdSamplingOption in my Go service: log the first 10 per 5s, then sample at 10%. It works, but I notice that 'user not found' (DEBUG) and 'cache miss' (DEBUG) are being counted together in the same bucket. After 10 total DEBUG logs from both messages, both get sampled. I want each distinct log message to have its own counter of 10. How do I fix this with samber/slog-sampling?",
     "trap": "Without the skill, the model either rebuilds sampling from scratch or suggests separate logger instances per message. The correct fix is to set the Matcher to MatchByLevelAndMessage() (or MatchByMessage()) so each unique message gets its own deduplication bucket instead of all records sharing one bucket.",
     "assertions": [
-      {"id": "4.1", "text": "Identifies that the default Matcher groups all records into one bucket (regardless of message)"},
+      {"id": "4.1", "text": "Identifies that the configured Matcher buckets records by level alone (e.g. MatchByLevel()), ignoring the message — the default, MatchByLevelAndMessage(), already gives each message its own bucket"},
       {"id": "4.2", "text": "Recommends setting the Matcher field on ThresholdSamplingOption to MatchByLevelAndMessage() or MatchByMessage()"},
       {"id": "4.3", "text": "Explains that each unique message will then have its own independent threshold counter"},
       {"id": "4.4", "text": "Does NOT suggest creating separate logger instances per message type as the solution"},

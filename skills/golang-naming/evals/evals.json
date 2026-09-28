@@ -53,7 +53,7 @@
       },
       {
         "id": "2.5",
-        "text": "Enum values are prefixed with the type name (e.g., ConnectionStateIdle, ConnectionStateActive) rather than bare Idle/Active, and include a zero-value sentinel (Unknown or similar at iota position 0)"
+        "text": "Enum values are prefixed with the type name (e.g., ConnectionStateIdle, ConnectionStateActive) rather than bare Idle/Active, and protect the zero value — either a sentinel (Unknown or similar) at iota position 0 or values starting at iota + 1 (either is valid)"
       },
       {
         "id": "2.6",

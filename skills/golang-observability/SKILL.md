@@ -6,7 +6,7 @@ license: MIT
 compatibility: Designed for Claude Code, Codex or similar harness, and for projects using Golang.
 metadata:
   author: samber
-  version: "1.3.4"
+  version: "1.3.5"
   openclaw:
     emoji: "📡"
     homepage: https://github.com/samber/cc-skills-golang
@@ -65,7 +65,7 @@ When using observability libraries (Prometheus client, OpenTelemetry SDK, vendor
 - [references/metrics.md](references/metrics.md) — when declaring or naming metrics, choosing buckets or labels, or writing PromQL and SLO burn-rate alerts.
 - [references/tracing.md](references/tracing.md) — when setting up the TracerProvider, adding spans or `otelhttp`, recording span errors, or tuning sampling cost.
 - [references/profiling.md](references/profiling.md) — when enabling pprof in production or setting up continuous profiling with Pyroscope.
-- [references/rum.md](references/rum.md) — when tracking product events server-side (PostHog, Segment), or handling consent and data-subject requests under GDPR/CCPA.
+- [references/rum.md](references/rum.md) — when tracking product events server-side (PostHog, Segment), handling consent and data-subject requests under GDPR/CCPA, or choosing self-hosted vs SaaS analytics for data residency.
 - [references/alerting.md](references/alerting.md) — when writing alert rules, choosing severities and `for:` durations, or alerting on Go runtime metrics.
 - [references/dashboards.md](references/dashboards.md) — when setting up Grafana dashboards for Go runtime metrics.
 

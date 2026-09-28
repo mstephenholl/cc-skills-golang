@@ -6,7 +6,7 @@ license: MIT
 compatibility: Designed for Claude Code, Codex or similar harness, and for projects using Golang.
 metadata:
   author: samber
-  version: "1.3.2"
+  version: "1.3.3"
   openclaw:
     emoji: "💻"
     homepage: https://github.com/samber/cc-skills-golang
@@ -36,7 +36,7 @@ This skill owns the CLI's behavior under scripts and pipes; the library details 
 - → See `samber/cc-skills-golang@golang-spf13-cobra` skill for command hooks, flag groups, completions and positional-argument validation — set `Args: cobra.NoArgs`, `cobra.ExactArgs(n)` or `cobra.RangeArgs(min, max)` on the command instead of checking `len(args)` in `RunE`.
 - → See `samber/cc-skills-golang@golang-spf13-viper` skill for the configuration precedence pipeline (flags beat env, env beats the config file, the file beats defaults), env binding and unmarshaling.
 
-Runnable examples live in [assets/examples/](assets/examples/): `root.go` for the Cobra + Viper wiring, plus `flags.go`, `args.go`, `output.go`, `signal.go`, `completion.go`, `version.go`, `exit_codes.go` and `cli_test.go`.
+Runnable examples live in [assets/examples/](assets/examples/): `root.go` for the Cobra + Viper wiring, plus `flags.go`, `args.go`, `signal.go`, `version.go`, `exit_codes.go` and `cli_test.go`. Read [output.go](assets/examples/output.go) when adding an `--output` format flag or terminal-aware colors, and [completion.go](assets/examples/completion.go) when adding a `completion` command or custom flag and argument completions.
 
 ## Command layout
 

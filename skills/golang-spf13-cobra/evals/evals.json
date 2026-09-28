@@ -327,7 +327,7 @@
       },
       {
         "id": "14.3",
-        "text": "Explains cobra enforces this at flag parse time and returns a standard error"
+        "text": "Explains cobra enforces this itself — the flag-group check runs after PreRunE and before RunE — and returns a standard error"
       }
     ]
   },

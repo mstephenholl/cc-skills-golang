@@ -6,7 +6,7 @@ license: MIT
 compatibility: Designed for Claude Code, Codex or similar harness, and for projects using Golang.
 metadata:
   author: samber
-  version: "1.3.3"
+  version: "1.3.4"
   openclaw:
     emoji: "📰"
     homepage: https://github.com/samber/cc-skills-golang
@@ -37,6 +37,8 @@ allowed-tools: Read Edit Write Glob Grep Bash(go:*) Bash(golangci-lint:*) Bash(g
 | --- | --- | --- |
 | **Golang Weekly** | Weekly curated Go content, news, and articles | <https://golangweekly.com/> |
 | **Awesome Go Newsletter** | Updates on new Go libraries and tools | <https://go.libhunt.com/> |
+
+One or two newsletters are enough — past that, overlapping issues become noise that gets skimmed and then ignored.
 
 ## Reddit & Communities
 

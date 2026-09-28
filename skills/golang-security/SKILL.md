@@ -6,7 +6,7 @@ license: MIT
 compatibility: Designed for Claude Code, Codex or similar harness, and for projects using Golang.
 metadata:
   author: samber
-  version: "1.2.5"
+  version: "1.2.6"
   openclaw:
     emoji: "🔒"
     homepage: https://github.com/samber/cc-skills-golang
@@ -87,6 +87,7 @@ Parameterized SQL, `exec.Command` with separate args, and `html/template` are th
 | High | Trusting client headers (`X-Forwarded-For`, `X-User-Role`) | Any client can forge them. Trust proxy headers only from known proxy IPs; verify identity server-side |
 | High | `math/rand` for tokens, even seeded from `crypto/rand` | PRNG output is deterministic once the seed or state is inferred. Read token bytes directly from `crypto/rand` |
 | High | MD5/SHA-1/SHA-256 for passwords | Fast hashes are brute-forced on GPUs. Use Argon2id; Go's bcrypt returns `ErrPasswordTooLong` above 72 bytes rather than truncating |
+| Medium | Decoding a request body (JSON/XML/gob) without a size cap | One oversized request can exhaust server memory. Wrap `r.Body` in `http.MaxBytesReader` with an explicit limit before decoding |
 | Medium | Binding every listener to `0.0.0.0` | Exposes the service, and any pprof or admin endpoint on it, to all interfaces. Make the bind address configurable and bind debug listeners to `127.0.0.1` |
 
 ## Detailed Categories
@@ -98,9 +99,9 @@ Load the reference that matches the code in front of you:
 - [filesystem.md](./references/filesystem.md) — when a file path, archive entry or temp file derives from input, or when writing keys or secrets to disk.
 - [network.md](./references/network.md) — when configuring an HTTP server or listener, redirecting to a user-supplied URL, exposing pprof, parsing XML, or comparing secrets.
 - [cookies.md](./references/cookies.md) — when setting cookies, sessions, or CSRF tokens.
-- [architecture.md](./references/architecture.md) — when designing authentication, authorization, JWT validation, mTLS, security headers, or rate limiting.
+- [architecture.md](./references/architecture.md) — when designing authentication, authorization, JWT validation, mTLS, security headers, or rate limiting, or trusting a private/self-signed CA.
 - [secrets.md](./references/secrets.md) — when code needs credentials, API keys, or connection strings.
-- [logging.md](./references/logging.md) — when logging user-controlled data or returning errors to clients.
+- [logging.md](./references/logging.md) — when logging user-controlled data, PII or secrets, or returning errors to clients.
 - [third-party.md](./references/third-party.md) — when sending data to analytics, error trackers, or other third-party services.
 - [memory-safety.md](./references/memory-safety.md) — when sizing allocations from input, narrowing integers, sharing state across goroutines, or using `unsafe`.
 - [threat-modeling.md](./references/threat-modeling.md) — for design reviews and DREAD scoring.

@@ -6,7 +6,7 @@ license: MIT
 compatibility: Designed for Claude Code, Codex or similar harness, and for projects using Golang.
 metadata:
   author: samber
-  version: "1.4.4"
+  version: "1.4.5"
   openclaw:
     emoji: "🚀"
     homepage: https://github.com/samber/cc-skills-golang
@@ -163,7 +163,7 @@ For projects that produce Docker images: multi-platform build, SBOM and provenan
 
 ## Repository Security Settings
 
-Read [repo-security.md](./references/repo-security.md) when configuring branch protection, the default `GITHUB_TOKEN` permissions, fork PR restrictions, secrets, or a release environment — these settings are what make the pipeline's permission model trustworthy.
+Read [repo-security.md](./references/repo-security.md) when configuring branch protection, the default `GITHUB_TOKEN` permissions, fork PR restrictions, secrets, or a release environment, or reviewing a workflow's `permissions:` block or fork exposure — these settings are what make the pipeline's permission model trustworthy.
 
 ---
 

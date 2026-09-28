@@ -6,7 +6,7 @@ license: MIT
 compatibility: Designed for Claude Code, Codex or similar harness, and for projects using Golang.
 metadata:
   author: samber
-  version: "1.3.4"
+  version: "1.3.5"
   openclaw:
     emoji: "✅"
     homepage: https://github.com/samber/cc-skills-golang
@@ -97,6 +97,8 @@ func TestCalculatePrice(t *testing.T) {
 | `EqualValues` | Converts to a common type first (`int32(1)` equals `int64(1)`) | Comparing across numeric or named types |
 | `EqualExportedValues` | Exported fields only | Structs whose unexported fields (caches, mutexes, timestamps) legitimately differ |
 | `Same` / `NotSame` | Pointer identity | You need "the same object", not "an equal object" |
+
+Prefer the assertion that states the intent over a hand-rolled `Equal`, since its failure message then names the actual problem: `JSONEq`/`YAMLEq` (documents equivalent despite key order and whitespace), `ElementsMatch` (same elements, any order), `InDelta` (floats within a tolerance), `WithinDuration` (times within a window), `Regexp` (string matches a pattern), `Eventually`/`EventuallyWithT` (async condition, polled until a timeout) and `Same`/`NotSame` (pointer identity).
 
 ## Polling with EventuallyWithT
 

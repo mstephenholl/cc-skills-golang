@@ -7,7 +7,6 @@
   - [Use `log/slog` instead of third-party loggers _(Go 1.21+)_](#use-logslog-instead-of-third-party-loggers-go-121)
   - [Use `slices` package instead of `sort` and manual loops _(Go 1.21+)_](#use-slices-package-instead-of-sort-and-manual-loops-go-121)
   - [Use `maps` package _(Go 1.21+)_](#use-maps-package-go-121)
-  - [Use `cmp.Or` for default values _(Go 1.22+)_](#use-cmpor-for-default-values-go-122)
   - [Use `sync.OnceFunc`, `sync.OnceValue`, `sync.OnceValues` _(Go 1.21+)_](#use-synconcefunc-synconcevalue-synconcevalues-go-121)
   - [Use enhanced `context` functions _(Go 1.21+)_](#use-enhanced-context-functions-go-121)
 - [Go 1.22 Modernizations (February 2024)](#go-122-modernizations-february-2024)
@@ -18,6 +17,7 @@
   - [Use `strings.CutPrefix` and `strings.CutSuffix` _(Go 1.20+)_](#use-stringscutprefix-and-stringscutsuffix-go-120)
   - [Use `reflect.TypeFor[T]()` _(Go 1.22+)_](#use-reflecttypefort-go-122)
   - [Use `database/sql.Null[T]` _(Go 1.22+)_](#use-databasesqlnullt-go-122)
+  - [Use `cmp.Or` for default values _(Go 1.22+)_](#use-cmpor-for-default-values-go-122)
 - [Go 1.23 Modernizations (August 2024)](#go-123-modernizations-august-2024)
   - [Use iterators (`range` over functions) _(Go 1.23+)_](#use-iterators-range-over-functions-go-123)
   - [Use iterator-based `slices` and `maps` functions _(Go 1.23+)_](#use-iterator-based-slices-and-maps-functions-go-123)
@@ -169,17 +169,6 @@ for k, v := range original { clone[k] = v }
 clone := maps.Clone(original)
 ```
 
-### Use `cmp.Or` for default values _(Go 1.22+)_
-
-```go
-// Before
-addr := os.Getenv("ADDR")
-if addr == "" { addr = ":8080" }
-
-// After (Go 1.22+)
-addr := cmp.Or(os.Getenv("ADDR"), ":8080")
-```
-
 ### Use `sync.OnceFunc`, `sync.OnceValue`, `sync.OnceValues` _(Go 1.21+)_
 
 ```go
@@ -317,6 +306,17 @@ var age  sql.NullInt64
 // After (Go 1.22+)
 var name sql.Null[string]
 var age  sql.Null[int64]
+```
+
+### Use `cmp.Or` for default values _(Go 1.22+)_
+
+```go
+// Before
+addr := os.Getenv("ADDR")
+if addr == "" { addr = ":8080" }
+
+// After (Go 1.22+)
+addr := cmp.Or(os.Getenv("ADDR"), ":8080")
 ```
 
 ---

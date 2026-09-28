@@ -79,8 +79,8 @@
     "assertions": [
       {"id": "6.1", "text": "Mentions go.dev as the official Go website"},
       {"id": "6.2", "text": "Mentions pkg.go.dev for package discovery and documentation"},
-      {"id": "6.3", "text": "Mentions tour.golang.org (Go Tour) for interactive learning"},
-      {"id": "6.4", "text": "Mentions play.golang.org (Go Playground) for testing code"},
+      {"id": "6.3", "text": "Mentions the Go Tour (go.dev/tour, formerly tour.golang.org) for interactive learning"},
+      {"id": "6.4", "text": "Mentions the Go Playground (go.dev/play, formerly play.golang.org) for testing code"},
       {"id": "6.5", "text": "Mentions go.dev/blog (official Go blog) for announcements"}
     ]
   },

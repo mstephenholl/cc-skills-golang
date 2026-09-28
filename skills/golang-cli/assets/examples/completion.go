@@ -1,8 +1,6 @@
 package main
 
 import (
-	"os"
-
 	"github.com/spf13/cobra"
 )
 
@@ -13,18 +11,19 @@ func init() {
 	rootCmd.AddCommand(&cobra.Command{
 		Use:       "completion [bash|zsh|fish|powershell]",
 		Short:     "Generate shell completion script",
-		Args:      cobra.ExactValidArgs(1),
+		Args:      cobra.MatchAll(cobra.ExactArgs(1), cobra.OnlyValidArgs),
 		ValidArgs: []string{"bash", "zsh", "fish", "powershell"},
 		RunE: func(cmd *cobra.Command, args []string) error {
+			out := cmd.OutOrStdout() // tests capture it with SetOut; os.Stdout can't be redirected
 			switch args[0] {
 			case "bash":
-				return rootCmd.GenBashCompletionV2(os.Stdout, true)
+				return rootCmd.GenBashCompletionV2(out, true)
 			case "zsh":
-				return rootCmd.GenZshCompletion(os.Stdout)
+				return rootCmd.GenZshCompletion(out)
 			case "fish":
-				return rootCmd.GenFishCompletion(os.Stdout, true)
+				return rootCmd.GenFishCompletion(out, true)
 			case "powershell":
-				return rootCmd.GenPowerShellCompletionWithDesc(os.Stdout)
+				return rootCmd.GenPowerShellCompletionWithDesc(out)
 			}
 			return nil
 		},

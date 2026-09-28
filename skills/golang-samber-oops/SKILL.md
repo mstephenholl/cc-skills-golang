@@ -6,7 +6,7 @@ license: MIT
 compatibility: Designed for Claude Code, Codex or similar harness, and for projects using Golang.
 metadata:
   author: samber
-  version: "1.2.3"
+  version: "1.2.4"
   openclaw:
     emoji: "💥"
     homepage: https://github.com/samber/cc-skills-golang
@@ -82,7 +82,7 @@ Prefer the dedicated methods over generic `.With()` where they exist — `.User(
 - **Wrap without a nil check** — `Wrap` and `Wrapf` return nil when `err` is nil, so `return oops.In("processor").Wrapf(err, "fetch failed")` replaces the `if err != nil { … } return nil` block.
 - **Add context once per package boundary** — each layer wraps with what only it knows (handler: `.Request()`; service: the operation; repository: the query), not at every function call.
 - **Set request-wide context once in middleware** — store a builder with `oops.WithBuilder(ctx, builder)` and start downstream errors from `oops.FromContext(ctx)`, so trace ID, request and user reach every error without extra parameters.
-- **Wrap goroutine bodies with `oops.Recover` where a panic would crash the process** — call it inside the goroutine, since a recover in the parent never sees a child's panic, and attach `.In()`, `.Code()` or `.Hint()` so the recovered error is diagnosable.
+- **Wrap goroutine bodies with `oops.Recover` where a panic would crash the process** — call it inside the goroutine, since a recover in the parent never sees a child's panic, and attach `.In()`, `.Code()` or `.Hint()` so the recovered error is diagnosable. To turn a function's panics, including a failed `oops.Assertf`, into its returned error: `func Process(data string) (err error) { return oops.In("processor").Recover(func() { risky(data) }) }`.
 - **Read attributes with `oops.AsOops(err)`** — it unwraps like `errors.As`, whereas a bare `err.(oops.OopsError)` misses an oops error wrapped by `fmt.Errorf("%w")`; use `oops.GetPublic(err, fallback)` for the user-facing message.
 
 ## References

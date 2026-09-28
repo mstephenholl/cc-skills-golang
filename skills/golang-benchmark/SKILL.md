@@ -6,7 +6,7 @@ license: MIT
 compatibility: Designed for Claude Code, Codex or similar harness, and for projects using Golang.
 metadata:
   author: samber
-  version: "1.3.4"
+  version: "1.3.5"
   openclaw:
     emoji: "📊"
     homepage: https://github.com/samber/cc-skills-golang
@@ -146,10 +146,10 @@ go tool trace trace.out
 - [benchstat.md](./references/benchstat.md) — when comparing runs, reading `~`/p-values/±%, choosing `-count`, interleaving runs, or filtering and projecting results
 - [pprof.md](./references/pprof.md) — when reading a CPU, heap, goroutine, mutex or block profile, or filtering, labeling, diffing or exporting one
 - [trace.md](./references/trace.md) — when latency is high but CPU is low, or when investigating scheduling, GC phases, annotations or the flight recorder
-- [compiler-analysis.md](./references/compiler-analysis.md) — when a benchmark shows allocations or call overhead you didn't expect (escape analysis, inlining, bounds checks, SSA, assembly)
+- [compiler-analysis.md](./references/compiler-analysis.md) — when a benchmark shows allocations or call overhead you didn't expect (escape analysis, inlining, bounds checks, SSA, assembly), or to verify a compiler decision (receiver choice, inlining, escape) before relying on it
 - [tools.md](./references/tools.md) — when a narrower diagnostic answers the question (GODEBUG, `runtime/metrics`, `expvar`, fieldalignment, fgprof, perf)
 - [ci-regression.md](./references/ci-regression.md) — when adding benchmark gating to a pipeline, choosing benchdiff/cob/gobenchdata, or tuning runners for stable results
-- [investigation-session.md](./references/investigation-session.md) — when production behaves differently from benchmarks and you need a temporary instrumented session (PromQL, host correlation, cost warnings)
+- [investigation-session.md](./references/investigation-session.md) — when production behaves differently from benchmarks and you need a temporary instrumented session (PromQL, host correlation, cost warnings), or when you need alert thresholds for GC pressure, goroutine leaks, non-heap RSS growth, or `go_memstats_*` scrape overhead
 - [prometheus-go-metrics.md](./references/prometheus-go-metrics.md) — when writing PromQL on Go runtime metrics or enabling the `runtime/metrics` collectors
 
 ## Cross-References

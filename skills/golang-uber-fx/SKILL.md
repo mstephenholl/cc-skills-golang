@@ -6,7 +6,7 @@ license: MIT
 compatibility: Designed for Claude Code, Codex or similar harness, and for projects using Golang.
 metadata:
   author: samber
-  version: "1.2.4"
+  version: "1.2.5"
   openclaw:
     emoji: "🏭"
     homepage: https://github.com/samber/cc-skills-golang
@@ -75,7 +75,7 @@ app.Run() // blocks until SIGINT/SIGTERM, then runs OnStop hooks
 Boot stages: `fx.New` validates types (constructors do not run); `app.Start(ctx)` runs each `fx.Invoke` and fires OnStart hooks in topological order; main blocks on `app.Done()`; `app.Stop(ctx)` fires OnStop hooks in reverse order. Default timeout is **15 seconds** — override with `fx.StartTimeout` / `fx.StopTimeout`.
 
 - **`fx.Invoke` is the trigger** — a constructor runs only if an Invoke references its type directly or transitively, so an app with no Invoke builds nothing.
-- **`fx.Supply` for pre-built values** — wrapping a parsed config in `fx.Provide(func() *Config { return cfg })` adds a no-op constructor and hides that the value already exists.
+- **`fx.Supply` for pre-built values** — wrapping a parsed config in `fx.Provide(func() *Config { return cfg })` adds a no-op constructor and hides that the value already exists. Tag a supplied value with ``fx.Supply(fx.Annotate(apiKey, fx.ResultTags(`name:"apikey"`)))`` when two values share a type — untagged, the second fails as "already provided".
 - **Validate the graph in CI** with `fx.New(...).Err()` — it reports missing providers and cycles without starting anything.
 
 ## Lifecycle Hooks

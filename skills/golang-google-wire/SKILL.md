@@ -6,7 +6,7 @@ license: MIT
 compatibility: Designed for Claude Code, Codex or similar harness, and for projects using Golang.
 metadata:
   author: samber
-  version: "1.1.4"
+  version: "1.1.5"
   openclaw:
     emoji: "🪡"
     homepage: https://github.com/samber/cc-skills-golang
@@ -134,7 +134,7 @@ Add `//go:generate go run github.com/google/wire/cmd/wire` to injector files so 
 | --- | --- |
 | Editing `wire_gen.go` to fix a build error | Every `wire ./...` overwrites it. Fix the graph instead — add the missing provider (or `wire.Value`) to a set — and regenerate. |
 | Missing `//go:build wireinject` on an injector file | Make it the first line. Without it the stub compiles alongside `wire_gen.go`, and both declare the same function (`redeclared in this block`). |
-| Two providers for the same type (two `string` DSNs, two `*sql.DB`) | Wire allows one provider per type. Declare distinct named types (`type PrimaryDSN string`, `type ReplicaDSN string`) or struct wrappers (`type PrimaryDB struct{ *sql.DB }`); an alias (`=`) is the same type to wire. |
+| Two providers for the same type (two `string` DSNs, two `*sql.DB`, or `wire.FieldsOf` promoting several `string` fields) | Wire allows one provider per type. Declare distinct named types (`type PrimaryDSN string`, `type ReplicaDSN string`) or struct wrappers (`type PrimaryDB struct{ *sql.DB }`); an alias (`=`) is the same type to wire. |
 | Injecting an interface without `wire.Bind` | Add `wire.Bind(new(MyInterface), new(*MyImpl))` to the provider set. |
 | Changing a constructor signature without regenerating | Run `wire ./...` (or `go generate ./...`) before `go build`; a stale `wire_gen.go` fails with argument-count errors inside generated code. |
 | Deferring `cleanup()` before checking the error | Generated injectors return a nil cleanup on error; check `err` first, or guard with `if cleanup != nil { defer cleanup() }`. |

@@ -6,7 +6,7 @@ license: MIT
 compatibility: Designed for Claude Code, Codex or similar harness, and for projects using Golang.
 metadata:
   author: samber
-  version: "1.3.2"
+  version: "1.3.3"
   openclaw:
     emoji: "🎨"
     homepage: https://github.com/samber/cc-skills-golang
@@ -63,7 +63,7 @@ var buf bytes.Buffer       // zero value is ready to use
 
 ### Slice & Map Initialization
 
-Initialize a slice explicitly (`[]T{}` or `make`) when it can reach an encoder or an API response — a nil slice encodes as JSON `null`, not `[]`, which surprises consumers — and initialize a map before writing to it, since a nil map panics on write. A local `var s []T` that only accumulates through `append` is idiomatic; `len`, `range` and map lookups are safe on nil.
+Initialize a slice explicitly (`[]T{}` or `make`) when it can reach an encoder or an API response — a nil slice encodes as JSON `null`, not `[]`, which surprises consumers — and initialize a map before writing to it, since a nil map panics on write. A function whose callers may write to or encode its result returns `map[K]V{}` or an empty slice, not nil — the caller's first write to a nil map panics far from the function that returned it. A local `var s []T` that only accumulates through `append` is idiomatic; `len`, `range` and map lookups are safe on nil.
 
 ```go
 users := []User{}                       // returned from an API handler: encodes as []
@@ -80,7 +80,7 @@ Composite literals MUST use field names — positional fields break when the typ
 ## Control Flow
 
 - **Errors and edge cases MUST be handled first, then return or `continue`** — the happy path stays at the lowest indentation; nested if-else buries the success path in the innermost block and every new check deepens it.
-- **Give a `switch` over one value a `default`** that handles or rejects unexpected values — without it, a newly added constant falls through silently.
+- **Prefer a `switch` over an if-else chain that compares one value, and give it a `default`** that handles or rejects unexpected values — without it, a newly added constant falls through silently.
 
 ### Default-Then-Override Instead of `else`
 

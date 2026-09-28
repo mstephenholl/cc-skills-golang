@@ -6,7 +6,7 @@ license: MIT
 compatibility: Designed for Claude Code, Codex or similar harness, and for projects using Golang.
 metadata:
   author: samber
-  version: "1.1.4"
+  version: "1.1.5"
   openclaw:
     emoji: "🐍"
     homepage: https://github.com/samber/cc-skills-golang
@@ -67,7 +67,7 @@ Args validation → PersistentPreRunE → PreRunE → required-flag and flag-gro
 
 Execution stops at the first returned error, and only the `*E` variants can return one (see Common Mistakes).
 
-- **A child `PersistentPreRunE` replaces the parent's** — cobra runs only the nearest persistent hook. Call `rootCmd.PersistentPreRunE(cmd, args)` from the child's hook, or set `cobra.EnableTraverseRunHooks = true` (cobra v1.8.0+) to run every ancestor's persistent hooks, root first for pre-run and child first for post-run. It is a package-level global, so it changes every command in the process, tests included.
+- **A child `PersistentPreRunE` replaces the parent's** — cobra runs only the nearest persistent hook. Call `rootCmd.PersistentPreRunE(cmd, args)` from the child's hook, or set `cobra.EnableTraverseRunHooks = true` (cobra v1.8.0+) to run every ancestor's persistent hooks, root first for pre-run and child first for post-run. It is a process-wide global that changes every command, tests included, so prefer the explicit parent call when only one child needs both hooks.
 - **`PostRunE` and `PersistentPostRunE` run only when `RunE` succeeded** — put cleanup that must also run on failure in a `defer` inside `RunE`.
 - **Hooks run before required flags are checked** — a `PersistentPreRunE` can't assume `MarkFlagRequired` flags are set.
 
@@ -83,7 +83,7 @@ Register groups with `AddGroup` before the `AddCommand` calls whose commands set
 | Writing `len(args)` checks in `RunE` | Bypasses cobra's standard error messages ("accepts 1 arg(s), received 2") | Declare `Args: cobra.ExactArgs(1)`; compose rules with `cobra.MatchAll(cobra.MinimumNArgs(1), cobra.OnlyValidArgs)` plus `ValidArgs` |
 | Writing to `os.Stdout` / `os.Stderr` or calling `fmt.Println` | Tests cannot capture output — os-level file handles can't be redirected | Use `cmd.OutOrStdout()` / `cmd.ErrOrStderr()`, which tests redirect with `SetOut` / `SetErr` |
 | Reusing a root command across tests | Parsed flag values and `Changed` state persist; the second `Execute()` sees flags from the first | Build a fresh command tree per test from a `newRootCmd()` constructor |
-| Full usage printed on every runtime error | Cobra prints usage after any returned error | `SilenceUsage: true` on the root — errors print one line, `--help` still prints usage |
+| Full usage printed on every runtime error | Cobra prints usage after any returned error | `SilenceUsage: true` on the root — errors print one line, `--help` still prints usage; add `SilenceErrors: true` when `main()` prints the error itself, or cobra prints it twice |
 
 ## Further Reading
 

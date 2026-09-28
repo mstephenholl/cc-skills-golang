@@ -17,9 +17,9 @@
     "name": "lazy-vs-eager-vs-transient",
     "description": "Tests whether the model correctly chooses between lazy, eager, and transient service types",
     "prompt": "I have three services in my Go app: (1) a database connection that must be ready before serving requests, (2) a user repository that's only needed when user endpoints are called, and (3) a request logger that should be a fresh instance per request. Register them with samber/do.",
-    "trap": "Without the skill, the model registers all three with do.Provide (lazy), missing do.Eager for the database and do.ProvideTransient for the logger",
+    "trap": "Without the skill, the model registers all three with do.Provide (lazy), missing eager registration (do.ProvideValue, or do.Eager(value) in a do.Package) for the database and do.ProvideTransient for the logger",
     "assertions": [
-      {"id": "2.1", "text": "Uses do.Provide with do.Eager wrapper (or equivalent) for the database connection that must be ready immediately"},
+      {"id": "2.1", "text": "Registers the database connection eagerly — do.ProvideValue with an already-built connection, do.Eager(value) inside a do.Package, or invoking the lazy service at boot to fail fast (do.Eager takes a built value, not a provider)"},
       {"id": "2.2", "text": "Uses do.Provide (lazy, the default) for the user repository that's only needed on demand"},
       {"id": "2.3", "text": "Uses do.ProvideTransient for the request logger that needs a fresh instance each time"},
       {"id": "2.4", "text": "Correctly distinguishes between the three service lifecycle types"},

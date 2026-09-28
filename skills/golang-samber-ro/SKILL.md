@@ -6,7 +6,7 @@ license: MIT
 compatibility: Designed for Claude Code, Codex or similar harness, and for projects using Golang.
 metadata:
   author: samber
-  version: "1.2.4"
+  version: "1.2.5"
   openclaw:
     emoji: "👁"
     homepage: https://github.com/samber/cc-skills-golang
@@ -91,7 +91,7 @@ values, err := ro.Collect(observable)
 | Passing `ctx` only to `Subscribe` | The pipeline ignores cancellation and keeps running on shutdown | Chain `ContextWithTimeout` or `ContextReset` with `ThrowOnContextCancel`, and handle the error in `onError` |
 | `RetryConfig` without `MaxRetries` | `0` means retry forever; there is no backoff field, only a fixed `Delay` | Set `MaxRetries`, and put exponential backoff inside the source if needed |
 | Fallback before retry | `Catch`/`OnErrorReturn` swallows the error, so the retry never fires | Order: `RetryWithConfig` → `Catch`/`OnErrorResumeNextWith` → `OnErrorReturn` |
-| Logging inside `Map` | Mixes side effects into the transform | `Tap`, `TapOnNext`, `TapOnError` observe without altering the stream |
+| Logging inside `Map` | Mixes side effects into the transform | `Tap`, `TapOnNext`, `TapOnError` observe without altering the stream; the `plugins/observability/{slog,zap,zerolog,logrus}` modules wrap this as a `Log` operator for structured logs |
 | `Share()` when one consumer suffices | Extra lifecycle to reason about | Stay cold until several consumers need the same execution |
 
 ## References

@@ -204,11 +204,11 @@
     "name": "fields-of-struct",
     "description": "Tests wire.FieldsOf to expose struct fields as individual graph nodes",
     "prompt": "I have a single Config struct in my Go app with google/wire:\n\n```go\ntype Config struct {\n    DatabaseDSN  string\n    CacheAddress string\n    APIKey       string\n}\n\nfunc NewConfig() *Config { return loadFromEnv() }\n```\n\nNewDB needs a DatabaseDSN string, NewCache needs a CacheAddress string, NewExternalClient needs an APIKey string — but all three are plain strings. How do I make these available to the wire graph without creating three separate provider functions?",
-    "trap": "Without the skill, the model will suggest three named-type wrappers or three extraction functions, missing wire.FieldsOf which promotes struct fields directly.",
+    "trap": "Without the skill, the model will suggest three extraction functions, missing wire.FieldsOf which promotes struct fields directly — or apply FieldsOf to three plain string fields, which fails with multiple bindings for string.",
     "assertions": [
       {
         "id": "8.1",
-        "text": "Uses wire.FieldsOf(new(Config), \"DatabaseDSN\", \"CacheAddress\", \"APIKey\") or a subset"
+        "text": "Uses wire.FieldsOf with the provider's exact type — new(*Config) when NewConfig returns *Config, new(Config) when it returns a value — naming \"DatabaseDSN\", \"CacheAddress\", \"APIKey\" or a subset"
       },
       {
         "id": "8.2",
@@ -216,7 +216,7 @@
       },
       {
         "id": "8.3",
-        "text": "Updates NewDB, NewCache, NewExternalClient to accept the string fields as parameters (or uses named types alongside FieldsOf)"
+        "text": "Gives the three Config fields distinct named types (e.g. type DatabaseDSN string) and has NewDB, NewCache, NewExternalClient accept those types — FieldsOf over three plain string fields fails with multiple bindings for string"
       },
       {
         "id": "8.4",
