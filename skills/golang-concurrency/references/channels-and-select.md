@@ -115,7 +115,7 @@ ch := make(chan Task, 1000) // why 1000? what if it fills?
 
 ## Select for Non-Blocking Communication
 
-Use `select` to multiplex channel operations and always include `ctx.Done()` to prevent goroutine leaks:
+Use `select` to multiplex channel operations, and include `ctx.Done()` in any `select` that blocks on the caller's behalf — receives and sends alike — so the goroutine exits when the caller cancels:
 
 ```go
 func process(ctx context.Context, in <-chan Task, out chan<- Result) {

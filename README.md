@@ -196,24 +196,24 @@ These skills are designed as **atomic, cross-referencing units**. A skill may re
 
 |  | Skill | Flags | Error rate gap | Description (tok) | SKILL.md (tok) | Directory (tok) |
 | --- | --- | --- | --- | --- | --- | --- |
-| ⭐️ | ✅ `golang-code-style` | ⚡ 🤖 ⚙️ | -40% | 118 | 2,361 | 2,977 |
-| ⭐️ | ✅ `golang-data-structures` | ⚡ | -39% | 92 | 2,635 | 6,777 |
+| ⭐️ | ✅ `golang-code-style` | ⚡ 🤖 ⚙️ | -40% | 118 | 2,096 | 2,712 |
+| ⭐️ | ✅ `golang-data-structures` | ⚡ | -39% | 92 | 1,754 | 6,118 |
 | ⭐️ | ✅ `golang-database` | ⚡ ⚙️ | -38% | 80 | 2,704 | 7,567 |
 | ⭐️ | ✅ `golang-design-patterns` | ⚡ ⚙️ | -37% | 118 | 2,814 | 10,175 |
-| ⭐️ | ✅ `golang-documentation` | ⚡ 🤖 ⚙️ | -53% | 76 | 3,185 | 11,898 |
-| ⭐️ | ✅ `golang-error-handling` | ⚡ 🤖 ⚙️ | -26% | 116 | 1,709 | 5,124 |
+| ⭐️ | ✅ `golang-documentation` | ⚡ 🤖 ⚙️ | -53% | 76 | 1,544 | 10,335 |
+| ⭐️ | ✅ `golang-error-handling` | ⚡ 🤖 ⚙️ | -26% | 116 | 1,414 | 4,829 |
 | ⭐️ | ✅ `golang-how-to` | ⚡ | — | 104 | 4,307 | 18,030 |
 | ⭐️ | ✅ `golang-modernize` | ⚡ 🤖 | -43% | 104 | 3,486 | 15,145 |
-| ⭐️ | ✅ `golang-naming` | ⚡ ⚙️ | -23% | 86 | 2,958 | 7,622 |
+| ⭐️ | ✅ `golang-naming` | ⚡ ⚙️ | -23% | 86 | 1,992 | 6,656 |
 | ⭐️ | ✅ `golang-refactoring` | ⚡ 🧠 🤖 ⚙️ | — | 133 | 3,722 | 21,280 |
-| ⭐️ | ✅ `golang-safety` | ⚡ | -58% | 120 | 2,651 | 5,868 |
+| ⭐️ | ✅ `golang-safety` | ⚡ | -58% | 120 | 1,969 | 5,186 |
 | ⭐️ | ✅ `golang-testing` | ⚡ 🧠 🤖 ⚙️ | -32% | 98 | 4,253 | 8,805 |
 | ⭐️ | ✅ `golang-troubleshooting` | ⚡ 🧠 🤖 | -32% | 103 | 2,953 | 17,995 |
-| ⭐️ | ✅ `golang-security` | ⚡ 🧠 🤖 | -32% | 131 | 3,249 | 23,489 |
+| ⭐️ | ✅ `golang-security` | ⚡ 🧠 🤖 | -32% | 131 | 2,768 | 23,032 |
 |  | ✅ `golang-benchmark` | ⚡ 🧠 | -50% | 83 | 3,134 | 33,377 |
 |  | ✅ `golang-cli` | ⚡ | -43% | 111 | 2,324 | 6,139 |
-|  | ✅ `golang-concurrency` | ⚡ 🤖 ⚙️ | -39% | 110 | 2,234 | 7,311 |
-|  | ✅ `golang-context` | ⚡ ⚙️ | -34% | 82 | 1,387 | 4,450 |
+|  | ✅ `golang-concurrency` | ⚡ 🤖 ⚙️ | -39% | 110 | 1,906 | 7,006 |
+|  | ✅ `golang-context` | ⚡ ⚙️ | -34% | 82 | 1,044 | 4,107 |
 |  | ✅ `golang-continuous-integration` | ⚡ | -59% | 123 | 3,488 | 12,750 |
 |  | ✅ `golang-dependency-injection` | ⚡ 🤖 ⚙️ | -47% | 133 | 2,991 | 5,376 |
 |  | ✅ `golang-dependency-management` | ⚡ | -54% | 125 | 2,474 | 5,612 |

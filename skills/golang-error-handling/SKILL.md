@@ -6,7 +6,7 @@ license: MIT
 compatibility: Designed for Claude Code, Codex or similar harness, and for projects using Golang.
 metadata:
   author: samber
-  version: "1.3.2"
+  version: "1.3.3"
   openclaw:
     emoji: "⚠"
     homepage: https://github.com/samber/cc-skills-golang
@@ -21,55 +21,38 @@ paths:
 
 **Persona:** You are a Go reliability engineer. You treat every error as an event that must either be handled or propagated with context — silent failures and duplicate logs are equally unacceptable.
 
-**Orchestration mode:** Fan out the five category sub-agents described in the "Parallelizing Error Handling Audits" section (creation, wrapping, single-handling rule, panic/recover, structured logging) for auditing error handling across a large codebase, and consolidate their findings. On Claude Code, use `ultracode` to opt into multi-agent orchestration explicitly.
+**Orchestration mode:** For a codebase-wide error-handling audit, fan out parallel sub-agents split by package — each package's error paths can be traced independently — and consolidate into one per-file findings report. On Claude Code, use `ultracode` to opt into multi-agent orchestration explicitly.
 
 **Modes:**
 
-- **Coding mode** — writing new error handling code. Follow the best practices sequentially; optionally launch a background sub-agent to grep for violations in adjacent code (swallowed errors, log-and-return pairs) without blocking the main implementation.
-- **Review mode** — reviewing a PR's error handling changes. Focus on the diff: check for swallowed errors, missing wrapping context, log-and-return pairs, and panic misuse. Sequential.
-- **Audit mode** — auditing existing error handling across a codebase. Use up to 5 parallel sub-agents, each targeting an independent category (creation, wrapping, single-handling rule, panic/recover, structured logging).
+- **Coding** — writing new error-handling code; apply the rules below as you write.
+- **Review** — a PR's error-handling changes: start from the diff, then trace where each returned error is handled upstream, since a log-and-return pair often spans two files. Findings with file:line are the deliverable; fix when asked.
+- **Audit** — find swallowed or discarded errors, log-and-return pairs, `%w` leaking past boundaries, and goroutines without `recover`; report by file, and fix when asked.
 
 > **Community default.** A company skill that explicitly supersedes `samber/cc-skills-golang@golang-error-handling` skill takes precedence.
 
 # Go Error Handling Best Practices
 
-This skill guides the creation of robust, idiomatic error handling in Go applications. Follow these principles to write maintainable, debuggable, and production-ready error code.
+## Rules
 
-## Best Practices Summary
-
-1. **Returned errors MUST always be checked** — NEVER discard with `_`
-2. **Errors MUST be wrapped with context** using `fmt.Errorf("{context}: %w", err)`
-3. **Error strings MUST be lowercase**, without trailing punctuation
-4. **Use `%w` internally, `%v` at system boundaries** to control error chain exposure
-5. **MUST use `errors.Is` for sentinel matching and `errors.As`/`errors.AsType` for typed chain inspection** instead of direct comparison or bare type assertions. For Go 1.26+, prefer `errors.AsType[T](err)` when `T` implements `error`; use `errors.As(err, &target)` for Go <1.26 or for non-error interface targets.
-6. **SHOULD use `errors.Join`** (Go 1.20+) to combine independent errors
-7. **Errors MUST be either logged OR returned**, NEVER both (single handling rule)
-8. **Use sentinel errors** for expected conditions, custom types for carrying data
-9. **NEVER use `panic` for expected error conditions** — reserve for truly unrecoverable states
-10. **SHOULD use `slog`** (Go 1.21+) for structured error logging — not `fmt.Println` or `log.Printf`
-11. **Use `samber/oops`** for production errors needing stack traces, user/tenant context, or structured attributes
-12. **Log HTTP requests** with structured middleware capturing method, path, status, and duration
-13. **Use log levels** to indicate error severity
-14. **Never expose technical errors to users** — translate internal errors to user-friendly messages, log technical details separately
-15. **Keep log grouping low-cardinality** — at logging/APM boundaries, keep message templates stable and attach IDs, paths, line numbers, and counts as structured attributes. Error values may include useful operational context, but avoid putting high-cardinality data into the stable log message used for grouping.
+1. **Wrap with context** using `fmt.Errorf("{context}: %w", err)` so each layer names what it was doing; keep error strings lowercase with no trailing punctuation, because they are concatenated into longer chains.
+2. **Use `%w` internally, `%v` at system boundaries** — `%w` makes the wrapped error part of your API, so at a public boundary it lets callers `errors.As` into backend-internal types and couples them to your implementation.
+3. **Match with `errors.Is` and `errors.As`/`errors.AsType`, not `==` or bare type assertions** — wrapping breaks direct comparison. For Go 1.26+, prefer `errors.AsType[T](err)` when `T` implements `error`; use `errors.As(err, &target)` for older Go or non-error interface targets.
+4. **Combine independent errors with `errors.Join`** (Go 1.20+) — validating every field, closing every resource, failing batch items — instead of stopping at the first error or hand-rolling a multi-error type.
+5. **Log OR return an error, never both** (single handling rule) — every layer that does both adds a duplicate log entry for one failure.
+6. **Use sentinel errors** (`errors.New`, package-level `var`) for expected conditions, and custom types when callers need data from the error.
+7. **Reserve `panic` for unrecoverable states** — expected conditions such as bad input or a missing row return errors.
+8. **Log with `slog`** (Go 1.21+) key-value attributes rather than `fmt.Println` or `log.Printf`, with the level matching severity.
+9. **Use `samber/oops`** for production errors needing stack traces, user/tenant context, or structured attributes.
+10. **Log HTTP requests** with structured middleware capturing method, path, status, and duration.
+11. **Never expose technical errors to users** — translate internal errors to user-friendly messages, log technical details separately.
+12. **Keep log grouping low-cardinality** — at logging/APM boundaries, keep message templates stable and attach IDs, paths, line numbers, and counts as structured attributes. Error values may include useful operational context, but avoid putting high-cardinality data into the stable log message used for grouping.
 
 ## Detailed Reference
 
-- **[Error Creation](./references/error-creation.md)** — How to create errors that tell the story: error messages should be lowercase, no punctuation, and describe what happened without prescribing action. Covers sentinel errors (one-time preallocation for performance), custom error types (for carrying rich context), and the decision table for which to use when.
-
-- **[Error Wrapping and Inspection](./references/error-wrapping.md)** — Why `fmt.Errorf("{context}: %w", err)` beats `fmt.Errorf("{context}: %v", err)` (chains vs concatenation). How to inspect chains with `errors.Is`, `errors.As`, and Go 1.26+ `errors.AsType` for type-safe error handling, and `errors.Join` for combining independent errors.
-
-- **[Error Handling Patterns and Logging](./references/error-handling.md)** — The single handling rule: errors are either logged OR returned, NEVER both (prevents duplicate logs cluttering aggregators). Panic/recover design, `samber/oops` for production errors, and `slog` structured logging integration for APM tools.
-
-## Parallelizing Error Handling Audits
-
-When auditing error handling across a large codebase, use up to 5 parallel sub-agents — each targets an independent error category:
-
-- Sub-agent 1: Error creation — validate `errors.New`/`fmt.Errorf` usage, low-cardinality messages, custom types
-- Sub-agent 2: Error wrapping — audit `%w` vs `%v`, verify `errors.Is`/`errors.As` patterns
-- Sub-agent 3: Single handling rule — find log-and-return violations, swallowed errors, discarded errors (`_`)
-- Sub-agent 4: Panic/recover — audit `panic` usage, verify recovery at goroutine boundaries
-- Sub-agent 5: Structured logging — verify `slog` usage at error sites, check for PII in error messages
+- Read [error-creation.md](./references/error-creation.md) when choosing between a sentinel and a custom error type, or phrasing an error message.
+- Read [error-wrapping.md](./references/error-wrapping.md) when inspecting or joining error chains, or deciding between `%w` and `%v`.
+- Read [error-handling.md](./references/error-handling.md) when deciding where to log, where to recover from panics, or whether to adopt `samber/oops`.
 
 ## Cross-References
 

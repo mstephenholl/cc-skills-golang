@@ -6,7 +6,7 @@ license: MIT
 compatibility: Designed for Claude Code, Codex or similar harness, and for projects using Golang.
 metadata:
   author: samber
-  version: "1.3.4"
+  version: "1.3.5"
   openclaw:
     emoji: "📝"
     homepage: https://github.com/samber/cc-skills-golang
@@ -21,12 +21,12 @@ paths:
 
 **Persona:** You are a Go technical writer and API designer. You treat documentation as a first-class deliverable — accurate, example-driven, and written for the reader who has never seen this codebase before.
 
-**Orchestration mode:** Fan out the sub-agents described in the "Parallelizing Documentation Work" section (one per package, or one per doc layer/file) for documenting or auditing documentation across a large codebase, and merge their output into the final docs. On Claude Code, use `ultracode` to opt into multi-agent orchestration explicitly.
+**Orchestration mode:** For documenting or reviewing a large codebase where many packages lack docs, fan out parallel sub-agents split by package — doc comments live in disjoint files, so packages edit without conflicts — and consolidate into one set of per-file findings or applied doc changes. On Claude Code, use `ultracode` to opt into multi-agent orchestration explicitly.
 
 **Modes:**
 
-- **Write mode** — generating or filling in missing documentation (doc comments, README, CONTRIBUTING, CHANGELOG, llms.txt). Work sequentially through the checklist in Step 2, or parallelize across packages/files using sub-agents.
-- **Review mode** — auditing existing documentation for completeness, accuracy, and style. Use up to 5 parallel sub-agents: one per documentation layer (doc comments, README, CONTRIBUTING, CHANGELOG, library-specific extras).
+- **Write mode** — produce the documentation the user asked for. Compare the project against the [checklist](#documentation-checklist) and list the missing items in your reply without generating them unasked. Done when the requested docs exist and follow the Writing Principles.
+- **Review mode** — the deliverable is per-file findings: file:line, what is missing or wrong, and a suggested rewrite; if the user asked for fixes, apply them. Parallelize by package only when many packages lack docs.
 
 > **Community default.** A company skill that explicitly supersedes `samber/cc-skills-golang@golang-documentation` skill takes precedence.
 
@@ -39,7 +39,7 @@ Write documentation that serves both humans and AI agents. Good documentation ma
 - See `samber/cc-skills-golang@golang-naming` skill for naming conventions in doc comments.
 - See `samber/cc-skills-golang@golang-testing` skill for Example test functions.
 - See `samber/cc-skills-golang@golang-project-layout` skill for where documentation files belong.
-- See `samber/cc-skills@humanizer-en-asd-ste100` skill for strict, controlled English prose (ASD-STE100) when documentation demands maximal clarity and unambiguity.
+- See `samber/cc-skills@humanizer-en-asd-ste100` skill for strict, controlled English prose (ASD-STE100) when regulated or safety-critical documentation demands maximal clarity and unambiguity.
 
 ## Writing Principles
 
@@ -55,29 +55,19 @@ Apply to every piece of documentation you write or review:
 
 **Anti-patterns to remove on sight:** pure-paraphrase comments that start with the name but add nothing (godoc requires the name as prefix — what it forbids is stopping there), signature restatement, marketing vocabulary, groundless future claims (`future extensibility`, `easy to scale`), hollow transitions (`it's worth noting that`, `in conclusion`), template padding that adds no information.
 
-For regulated or safety-critical documentation that requires strict controlled-English prose, → See `samber/cc-skills@humanizer-en-asd-ste100` skill.
+## Doc Comments
 
-## Step 1: Detect Project Type
+- **Document every exported identifier**, plus complex internal functions; skip test functions — their names are the documentation.
+- **Start with the identifier's name and a verb phrase**, then cover why it exists, when to use it, its constraints (including concurrency safety), and the errors it returns.
+- **Include parameters, return values, error cases, and a usage example for exported functions** — the doc comment is the API's only contract on pkg.go.dev; keep each section to what the signature doesn't already say.
 
-Before documenting, determine the project type — it changes what documentation is needed:
+Read [references/code-comments.md](./references/code-comments.md) when writing or reviewing a doc comment, package comment, file-level description, `Deprecated:` marker or `// Play:` link.
 
-**Library** — no `main` package, meant to be imported by other projects:
+## Project Type
 
-- Focus on godoc comments, `ExampleXxx` functions, playground demos, pkg.go.dev rendering
-- See [Library Documentation](./references/library.md)
+A **library** has no `main` package and is imported by others; an **application/CLI** has a `main` package or `cmd/` directory and ships a binary or image. A module can be both — importable `pkg/` packages get library docs, `cmd/` binaries get application docs, and `internal/` packages get doc comments only, since external users cannot import them.
 
-**Application/CLI** — has `main` package, `cmd/` directory, produces a binary or Docker image:
-
-- Focus on installation instructions, CLI help text, configuration docs
-- See [Application Documentation](./references/application.md)
-
-**Both apply**: function comments, README, CONTRIBUTING, CHANGELOG.
-
-**Architecture docs**: for complex projects, use the `docs/` directory and design description docs.
-
-## Step 2: Documentation Checklist
-
-Every Go project needs these (ordered by priority):
+## Documentation Checklist
 
 | Item | Required | Library | Application |
 | --- | --- | --- | --- |
@@ -97,149 +87,10 @@ Every Go project needs these (ordered by priority):
 
 A private project might not need a documentation website, llms.txt, Go Playground demos...
 
-## Parallelizing Documentation Work
+## References
 
-When documenting a large codebase with many packages, use up to 5 parallel sub-agents for independent tasks:
+- [references/project-docs.md](./references/project-docs.md) — when writing or reordering a README, CONTRIBUTING.md or CHANGELOG, or documenting installation and distribution. Templates: [README](./assets/templates/README.md), [CONTRIBUTING](./assets/templates/CONTRIBUTING.md), [CHANGELOG](./assets/templates/CHANGELOG.md).
+- [references/library.md](./references/library.md) — when documenting a library: `ExampleXxx` tests, Go Playground demos, pkg.go.dev rendering, a documentation website, llms.txt ([template](./assets/templates/llms.txt)), or discoverability registries.
+- [references/application.md](./references/application.md) — when documenting an application or CLI: `--help` text, configuration (env vars, files, flags), architecture decision records, or REST/event/gRPC API docs.
 
-- Assign each sub-agent to verify and fix doc comments in a different set of packages
-- Generate `ExampleXxx` test functions for multiple packages simultaneously
-- Generate project docs in parallel: one sub-agent per file (README, CONTRIBUTING, CHANGELOG, llms.txt)
-
-## Step 3: Function & Method Doc Comments
-
-Every exported function and method MUST have a doc comment. Document complex internal functions too. Skip test functions.
-
-The comment starts with the function name and a verb phrase. Focus on **why** and **when**, not restating what the code already shows. The code tells you _what_ happens — the comment should explain _why_ it exists, _when_ to use it, _what constraints_ apply, and _what can go wrong_. Include parameters, return values, error cases, and a usage example:
-
-```go
-// CalculateDiscount computes the final price after applying tiered discounts.
-// Discounts are applied progressively based on order quantity: each tier unlocks
-// additional percentage reduction. Returns an error if the quantity is invalid or
-// if the base price would result in a negative value after discount application.
-//
-// Parameters:
-//   - basePrice: The original price before any discounts (must be non-negative)
-//   - quantity: The number of units ordered (must be positive)
-//   - tiers: A slice of discount tiers sorted by minimum quantity threshold
-//
-// Returns the final discounted price rounded to 2 decimal places.
-// Returns ErrInvalidPrice if basePrice is negative.
-// Returns ErrInvalidQuantity if quantity is zero or negative.
-//
-// Play: https://go.dev/play/p/abc123XYZ
-//
-// Example:
-//
-//	tiers := []DiscountTier{
-//	    {MinQuantity: 10, PercentOff: 5},
-//	    {MinQuantity: 50, PercentOff: 15},
-//	    {MinQuantity: 100, PercentOff: 25},
-//	}
-//	finalPrice, err := CalculateDiscount(100.00, 75, tiers)
-//	if err != nil {
-//	    log.Fatalf("Discount calculation failed: %v", err)
-//	}
-//	log.Printf("Ordered 75 units at $100 each: final price = $%.2f", finalPrice)
-func CalculateDiscount(basePrice float64, quantity int, tiers []DiscountTier) (float64, error) {
-    // implementation
-}
-```
-
-For the full comment format, deprecated markers, interface docs, and file-level comments, see **[Code Comments](./references/code-comments.md)** — how to document packages, functions, interfaces, and when to use `Deprecated:` markers and `BUG:` notes.
-
-## Step 4: README Structure
-
-README SHOULD follow this exact section order. Copy the template from [templates/README.md](./assets/templates/README.md):
-
-1. **Title** — project name as `# heading`
-2. **Badges** — shields.io pictograms (Go version, license, CI, coverage, Go Report Card...)
-3. **Summary** — 1-2 sentences explaining what the project does
-4. **Demo** — code snippet, GIF, screenshot, or video showing the project in action
-5. **Getting Started** — installation + minimal working example
-6. **Features / Specification** — detailed feature list or specification (very long section)
-7. **Contributing** — link to CONTRIBUTING.md or inline if very short
-8. **Contributors** — thank contributors (badge or list)
-9. **License** — license name + link
-
-Common badges for Go projects:
-
-```markdown
-[![Go Version](https://img.shields.io/github/go-mod/go-version/{owner}/{repo})](https://go.dev/) [![License](https://img.shields.io/github/license/{owner}/{repo})](./LICENSE) [![Build Status](https://img.shields.io/github/actions/workflow/status/{owner}/{repo}/test.yml?branch=main)](https://github.com/{owner}/{repo}/actions) [![Coverage](https://img.shields.io/codecov/c/github/{owner}/{repo})](https://codecov.io/gh/{owner}/{repo}) [![Go Report Card](https://goreportcard.com/badge/github.com/{owner}/{repo})](https://goreportcard.com/report/github.com/{owner}/{repo}) [![Go Reference](https://pkg.go.dev/badge/github.com/{owner}/{repo}.svg)](https://pkg.go.dev/github.com/{owner}/{repo})
-```
-
-For the full README guidance and application-specific sections, see [Project Docs](./references/project-docs.md#readme).
-
-## Step 5: CONTRIBUTING & Changelog
-
-**CONTRIBUTING.md** — Help contributors get started in under 10 minutes, covering prerequisites, clone, build, test, and PR process. If setup takes longer, improve the process with a Makefile, docker-compose, or devcontainer. See [Project Docs](./references/project-docs.md#contributingmd).
-
-**Changelog** — Track changes using [Keep a Changelog](https://keepachangelog.com/) format or GitHub Releases, copying the template from [templates/CHANGELOG.md](./assets/templates/CHANGELOG.md). Write each entry to answer _what changed for the reader_ — internal refactors without user-visible impact belong in commit history, and a fixed edge case never becomes a broad "reliability improvement" claim. See [Project Docs](./references/project-docs.md#changelog).
-
-## Step 6: Library-Specific Documentation
-
-For Go libraries, add these on top of the basics:
-
-- **Go Playground demos** — create runnable demos and link them in doc comments with `// Play: https://go.dev/play/p/xxx`. Use a Go Playground integration when one is available to create and share playground URLs.
-- **Example test functions** — write `func ExampleXxx()` in `_test.go` files. These are executable documentation verified by `go test`.
-- **Generous code examples** — include multiple examples in doc comments showing common use cases.
-- **godoc** — your doc comments render on [pkg.go.dev](https://pkg.go.dev). Use `go doc` locally to preview; to inspect how a published package renders its docs, symbols, and examples, → See `samber/cc-skills-golang@golang-pkg-go-dev` skill.
-- **Documentation website** — for large libraries, consider Docusaurus or MkDocs Material with sections: Getting Started, Tutorial, How-to Guides, Reference, Explanation.
-- **Register for discoverability** (public libraries only) — suggest Context7, DeepWiki, OpenDeep, zRead to the maintainer; registration publishes the repository's docs to a third party, so never submit a private library.
-
-See [Library Documentation](./references/library.md) for details.
-
-## Step 7: Application-Specific Documentation
-
-For Go applications/CLIs:
-
-- **Installation methods** — pre-built binaries (GoReleaser), `go install`, Docker images, Homebrew...
-- **CLI help text** — make `--help` comprehensive; it's the primary documentation
-- **Configuration docs** — document all env vars, config files, CLI flags
-
-See [Application Documentation](./references/application.md) for details.
-
-## Step 8: API Documentation
-
-If your project exposes an API:
-
-| API Style    | Format      | Tool                                         |
-| ------------ | ----------- | -------------------------------------------- |
-| REST/HTTP    | OpenAPI 3.x | swaggo/swag (auto-generate from annotations) |
-| Event-driven | AsyncAPI    | Manual or code-gen                           |
-| gRPC         | Protobuf    | buf, grpc-gateway                            |
-
-Prefer auto-generation from code annotations when possible. See [Application Documentation](./references/application.md#api-documentation) for details.
-
-## Step 9: AI-Friendly Documentation
-
-Make your project consumable by AI agents:
-
-- **llms.txt** — add a `llms.txt` file at the repository root. Copy the template from [templates/llms.txt](./assets/templates/llms.txt). This file gives LLMs a structured overview of your project.
-- **Structured formats** — use OpenAPI, AsyncAPI, or protobuf for machine-readable API docs.
-- **Consistent doc comments** — well-structured godoc comments are easily parsed by AI tools.
-- **Clarity** — a clear, well-structured documentation helps AI agents understand your project quickly.
-
-## Step 10: Delivery Documentation
-
-Document how users get your project:
-
-**Libraries:**
-
-```bash
-go get github.com/{owner}/{repo}
-```
-
-**Applications:**
-
-```bash
-# Pre-built binary
-curl -sSL https://github.com/{owner}/{repo}/releases/latest/download/{repo}-$(uname -s)-$(uname -m) -o /usr/local/bin/{repo}
-
-# From source
-go install github.com/{owner}/{repo}@latest
-
-# Docker
-docker pull {registry}/{owner}/{repo}:latest
-```
-
-See [Project Docs](./references/project-docs.md#delivery) for Dockerfile best practices and Homebrew tap setup.
+To inspect how a published package renders its docs, symbols, and examples on pkg.go.dev, → See `samber/cc-skills-golang@golang-pkg-go-dev` skill.

@@ -6,7 +6,7 @@
   - [Stack vs Heap (Escape Analysis)](#stack-vs-heap-escape-analysis)
   - [`new(T)` vs `&T{}`](#newt-vs-t)
 - [`unsafe.Pointer`](#unsafepointer)
-  - [The 6 Valid Patterns (from the Go spec)](#the-6-valid-patterns-from-the-go-spec)
+  - [The 6 Valid Patterns (from the `unsafe` package docs)](#the-6-valid-patterns-from-the-unsafe-package-docs)
   - [Critical Rule: NEVER Store `uintptr` Across Statements](#critical-rule-never-store-uintptr-across-statements)
   - [Modern Alternatives (prefer these)](#modern-alternatives-prefer-these)
 - [`weak.Pointer[T]` (Go 1.24+)](#weakpointert-go-124)
@@ -44,11 +44,9 @@ p := &Point{X: 1}     // *Point with initialized fields — preferred
 
 ## `unsafe.Pointer`
 
-`unsafe.Pointer` bypasses Go's type system for FFI and low-level memory manipulation. Only the 6 patterns from the Go spec are safe; any other pattern is undefined behavior.
+`unsafe.Pointer` bypasses Go's type system for FFI and low-level memory manipulation. Only the 6 patterns documented in the `unsafe` package are valid; any other pattern is undefined behavior.
 
-### The 6 Valid Patterns (from the Go spec)
-
-These are the ONLY safe ways to use `unsafe.Pointer`. Any other pattern is undefined behavior.
+### The 6 Valid Patterns (from the `unsafe` package docs)
 
 **Pattern 1: Convert `*T` to `*U` via `unsafe.Pointer`**
 
@@ -58,32 +56,36 @@ f := 1.5
 bits := *(*uint64)(unsafe.Pointer(&f))
 ```
 
-**Pattern 2: Convert `unsafe.Pointer` to `uintptr` and back (same expression)**
+**Pattern 2: Convert `unsafe.Pointer` to `uintptr` (but not back)** — the integer is only for printing or hashing an address; it keeps nothing alive.
+
+**Pattern 3: Convert `unsafe.Pointer` to `uintptr` and back, with arithmetic, in one expression**
 
 ```go
-// Pointer arithmetic — MUST be a single expression
+// Pointer arithmetic — MUST be a single expression; prefer unsafe.Add (below)
 p := unsafe.Pointer(uintptr(unsafe.Pointer(&s.field)) + offset)
 ```
 
-**Pattern 3: `reflect.Value.Pointer()` or `UnsafeAddr()` to `unsafe.Pointer`**
-
-```go
-p := unsafe.Pointer(reflect.ValueOf(&x).Pointer())
-```
-
-**Pattern 4: `syscall.Syscall` arguments**
+**Pattern 4: `syscall.Syscall` arguments** — the conversion must appear in the call expression itself.
 
 ```go
 syscall.Syscall(SYS_READ, fd, uintptr(unsafe.Pointer(&buf[0])), uintptr(len(buf)))
 ```
 
+**Pattern 5: `reflect.Value.Pointer()` or `UnsafeAddr()` to `unsafe.Pointer`, immediately**
+
+```go
+p := unsafe.Pointer(reflect.ValueOf(&x).Pointer())
+```
+
+**Pattern 6: `reflect.SliceHeader`/`StringHeader` `Data` field to or from `unsafe.Pointer`** — both headers are deprecated; use `unsafe.Slice`, `unsafe.String`, `unsafe.SliceData` and `unsafe.StringData` instead.
+
 ### Critical Rule: NEVER Store `uintptr` Across Statements
 
 ```go
-// ✗ DANGEROUS — GC can move the object between these two lines
+// ✗ DANGEROUS — a uintptr is not a reference: between these two lines the GC
+// may free x, or stack growth may move it
 u := uintptr(unsafe.Pointer(&x))
-// ... GC may run here, moving x ...
-p := unsafe.Pointer(u) // dangling pointer
+p := unsafe.Pointer(u) // may now be dangling
 
 // ✓ Safe — single expression
 p := unsafe.Pointer(uintptr(unsafe.Pointer(&x)) + offset)
@@ -118,8 +120,10 @@ if p := w.Value(); p != nil {
 
 ### Use Cases
 
-- **Deduplication caches** — intern equivalent values without preventing GC
-- **Automatic cache eviction** — cached objects evict when no strong references remain
+- **Canonicalization / interning** — deduplicate equivalent values without keeping them alive; pair with `runtime.AddCleanup` to delete the dead map entry
+- **Side tables keyed by object lifetime** — metadata that should disappear with the object it describes
+
+Not for caches that must retain entries: a weak entry vanishes as soon as no strong reference remains, so hit rates collapse under GC.
 
 ### `runtime.AddCleanup` vs `runtime.SetFinalizer`
 

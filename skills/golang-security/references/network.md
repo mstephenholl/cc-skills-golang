@@ -149,7 +149,8 @@ import "crypto/subtle"
 
 // For comparing fixed-length tokens or hashes:
 func checkToken(input, expected string) bool {
-    // ConstantTimeCompare already handles unequal lengths without leaking timing
+    // ConstantTimeCompare returns 0 immediately on unequal lengths — that leaks only
+    // the length, so use it on fixed-length values (hashes, fixed-size tokens)
     return subtle.ConstantTimeCompare([]byte(input), []byte(expected)) == 1
 }
 

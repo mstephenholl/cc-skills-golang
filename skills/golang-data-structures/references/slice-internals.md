@@ -12,10 +12,11 @@ Assigning or passing a slice copies the 24-byte header, not the backing array. B
 
 ## Capacity Growth
 
-When `append` exceeds capacity:
+When `append` exceeds capacity, the current runtime (Go 1.18+) grows it as follows — an implementation detail, not a spec guarantee, so never write code that depends on it:
 
 - `oldCap < 256`: double capacity
 - `oldCap ≥ 256`: grow ~25% (`oldCap + (oldCap + 3*256) / 4`)
+- The result is then rounded up to the allocator's size class, so the observed capacity is often larger than the formula
 
 ### Growth Cost
 

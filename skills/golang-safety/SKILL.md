@@ -6,7 +6,7 @@ license: MIT
 compatibility: Designed for Claude Code, Codex or similar harness, and for projects using Golang.
 metadata:
   author: samber
-  version: "1.3.3"
+  version: "1.3.4"
   openclaw:
     emoji: "🛡"
     homepage: https://github.com/samber/cc-skills-golang
@@ -28,20 +28,18 @@ Prevents programmer mistakes — bugs, panics, and silent data corruption in nor
 ## Best Practices Summary
 
 1. **Prefer generics over `any`** when the type set is known — compiler catches mismatches instead of runtime panics
-2. **Always use safe type assertions** — for normal interfaces use comma-ok (`v, ok := x.(T)`); for reflection in Go 1.25+ prefer `reflect.TypeAssert[T](value)` over `value.Interface().(T)`.
+2. **Use comma-ok type assertions** (`v, ok := x.(T)`) unless a mismatch is a programming error that should panic; for reflection in Go 1.25+, prefer `reflect.TypeAssert[T](value)` over `value.Interface().(T)`
 3. **Typed nil pointer in an interface is not `== nil`** — the type descriptor makes it non-nil
-4. **Writing to a nil map panics** — always initialize before use
+4. **Writing to a nil map panics** — initialize before the first write
 5. **`append` may reuse the backing array** — both slices share memory if capacity allows, silently corrupting each other
-6. **Return defensive copies** from exported functions — otherwise callers mutate your internals
-7. **`defer` runs at function exit, not loop iteration** — extract loop body to a function
+6. **Copy slices and maps at API boundaries** — on the way in (constructor arguments) and out (getters), behind an unexported field — otherwise callers mutate your internals through the shared backing array
+7. **`defer` runs at function exit, not loop iteration** — extract the loop body to a function
 8. **Integer conversions truncate silently** — `int64` to `int32` wraps without error
 9. **Float arithmetic is not exact** — use epsilon comparison or `math/big`
-10. **Design useful zero values** — nil map fields panic on first write; use lazy init
-11. **Use `sync.Once` for lazy init** — guarantees exactly-once even under concurrency
+10. **Design useful zero values**, as `sync.Mutex` and `bytes.Buffer` do — nil map fields panic on first write, so lazy-init them in methods
+11. **Use `sync.Once` for lazy init** — it guarantees exactly-once even under concurrency; use `sync.OnceValues` (Go 1.21+) when the init can fail, so every caller gets the error instead of it being discarded
 
 ## Nil Safety
-
-Nil-related panics are the most common crash in Go.
 
 ### The nil interface trap
 
@@ -74,27 +72,11 @@ func getHandler() http.Handler {
 | Slice   | **panic**      | **panic**      | 0              | 0 iterations   |
 | Channel | Blocks forever | Blocks forever | 0              | Blocks forever |
 
-```go
-// ✗ Bad — nil map panics on write
-var m map[string]int
-m["key"] = 1
-
-// ✓ Good — initialize or lazy-init in methods
-m := make(map[string]int)
-
-func (r *Registry) Add(name string, val int) {
-    if r.items == nil { r.items = make(map[string]int) }
-    r.items[name] = val
-}
-```
-
-See **[Nil Safety Deep Dive](./references/nil-safety.md)** for nil receivers, nil in generics, and nil interface performance.
+Read [nil-safety.md](./references/nil-safety.md) when a type has optional func fields or callbacks, methods that may run on a nil receiver, an error return built from a typed pointer, or generic code that compares against nil.
 
 ## Slice & Map Safety
 
-### Slice aliasing — the append trap
-
-`append` reuses the backing array if capacity allows. Both slices then share memory:
+`append` reuses the backing array if capacity allows, so both slices then share memory:
 
 ```go
 // ✗ Dangerous — a and b share backing array
@@ -106,171 +88,31 @@ b[0] = 99 // also modifies a[0]
 b := append(a[:len(a):len(a)], 4)
 ```
 
-### Map concurrent access
+Concurrent map access with any writer crashes the process with a fatal error that `recover` cannot catch — → See `samber/cc-skills-golang@golang-concurrency` for sync primitives.
 
-Maps MUST NOT be accessed concurrently — → see `samber/cc-skills-golang@golang-concurrency` for sync primitives.
-
-See **[Slice and Map Deep Dive](./references/slice-map-safety.md)** for range pitfalls, subslice memory retention, and `slices.Clone`/`maps.Clone`.
-
-## Numeric Safety
-
-### Implicit type conversions truncate silently
-
-```go
-// ✗ Bad — silently wraps around if val > math.MaxInt32 (3B becomes -1.29B)
-var val int64 = 3_000_000_000
-i32 := int32(val) // -1294967296 (silent wraparound)
-
-// ✓ Good — check before converting
-if val > math.MaxInt32 || val < math.MinInt32 {
-    return fmt.Errorf("value %d overflows int32", val)
-}
-i32 := int32(val)
-```
-
-### Float comparison
-
-```go
-// ✗ Bad — floating point arithmetic is not exact
-var a, b, c float64 = 0.1, 0.2, 0.3
-a+b == c // false
-
-// ✓ Good — use epsilon comparison
-const epsilon = 1e-9
-math.Abs((a+b)-c) < epsilon // true
-```
-
-### Division by zero
-
-Integer division by zero panics. Float division by zero produces `+Inf`, `-Inf`, or `NaN`.
-
-```go
-func avg(total, count int) (int, error) {
-    if count == 0 {
-        return 0, errors.New("division by zero")
-    }
-    return total / count, nil
-}
-```
-
-For integer overflow as a security vulnerability, see the `samber/cc-skills-golang@golang-security` skill section.
-
-## Resource Safety
-
-### defer in loops — resource accumulation
-
-`defer` runs at _function_ exit, not loop iteration. Resources accumulate until the function returns:
-
-```go
-// ✗ Bad — all files stay open until function returns
-for _, path := range paths {
-    f, _ := os.Open(path)
-    defer f.Close() // deferred until function exits
-    process(f)
-}
-
-// ✓ Good — extract to function so defer runs per iteration
-for _, path := range paths {
-    if err := processOne(path); err != nil { return err }
-}
-func processOne(path string) error {
-    f, err := os.Open(path)
-    if err != nil { return err }
-    defer f.Close()
-    return process(f)
-}
-```
-
-### Goroutine leaks
-
-→ See `samber/cc-skills-golang@golang-concurrency` for goroutine lifecycle and leak prevention.
-
-## Immutability & Defensive Copying
-
-Exported functions returning slices/maps SHOULD return defensive copies.
-
-### Protecting struct internals
-
-```go
-// ✗ Bad — exported slice field, anyone can mutate
-type Config struct {
-    Hosts []string
-}
-
-// ✓ Good — unexported field with accessor returning a copy
-type Config struct {
-    hosts []string
-}
-
-func (c *Config) Hosts() []string {
-    return slices.Clone(c.hosts)
-}
-```
-
-## Initialization Safety
-
-### Zero-value design
-
-Design types so `var x MyType` is safe — prevents "forgot to initialize" bugs:
-
-```go
-var mu sync.Mutex   // ✓ usable at zero value
-var buf bytes.Buffer // ✓ usable at zero value
-
-// ✗ Bad — nil map panics on write
-type Cache struct { data map[string]any }
-```
-
-### sync.Once for lazy initialization
-
-```go
-type DB struct {
-    once sync.Once
-    conn *sql.DB
-}
-
-func (db *DB) connection() *sql.DB {
-    db.once.Do(func() {
-        db.conn, _ = sql.Open("postgres", connStr)
-    })
-    return db.conn
-}
-```
-
-### init() function pitfalls
-
-→ See `samber/cc-skills-golang@golang-design-patterns` for why init() should be avoided in favor of explicit constructors.
+Read [slice-map-safety.md](./references/slice-map-safety.md) when returning part of a larger buffer, producing output from map iteration, deleting while iterating, or storing pointers to loop variables.
 
 ## Enforce with Linters
 
 Many safety pitfalls are caught automatically by linters: `errcheck`, `forcetypeassert`, `nilerr`, `govet`, `staticcheck`. See the `samber/cc-skills-golang@golang-lint` skill for configuration and usage.
 
-### Go 1.25+ reflection type assertions
-
-For reflection code, prefer `reflect.TypeAssert[T]` over `value.Interface().(T)`.
-
-```go
-v := reflect.ValueOf(x)
-if s, ok := reflect.TypeAssert[string](v); ok {
-    use(s)
-}
-```
-
 ## Common Mistakes
 
 | Mistake | Fix |
 | --- | --- |
-| Bare type assertion `v := x.(T)` | Panics on type mismatch, crashing the program. Use `v, ok := x.(T)` to handle gracefully |
+| Bare type assertion `v := x.(T)` | Panics on type mismatch, crashing the program. Use `v, ok := x.(T)` unless a mismatch is a bug that should crash |
 | Returning typed nil in interface function | Interface holds (type, nil) which is != nil. Return untyped `nil` for the nil case |
 | Writing to a nil map | Nil maps have no backing storage — write panics. Initialize with `make(map[K]V)` or lazy-init |
+| Calling an optional func field | Calling a nil func panics. Check `if t.OnDone != nil` before calling, or default it in the constructor |
 | Assuming `append` always copies | If capacity allows, both slices share the backing array. Use `s[:len(s):len(s)]` to force a copy |
+| Returning a small subslice of a large buffer | The subslice keeps the whole backing array alive, so the GC cannot free it. Return `slices.Clone(buf[:n])` |
 | `defer` in a loop | `defer` runs at function exit, not loop iteration — resources accumulate. Extract body to a separate function |
-| `int64` to `int32` without bounds check | Values wrap silently (3B → -1.29B). Check against `math.MaxInt32`/`math.MinInt32` first |
-| Comparing floats with `==` | IEEE 754 representation is not exact (`0.1+0.2 != 0.3`). Use `math.Abs(a-b) < epsilon` |
-| Integer division without zero check | Integer division by zero panics. Guard with `if divisor == 0` before dividing |
+| Narrowing an integer without a bounds check | Values wrap silently (3B → -1.29B as `int32`; -1 → 255 as `byte`). Check both bounds against the target's `math.Min*`/`math.Max*`, and reject negatives for unsigned targets |
+| Comparing floats with `==` | IEEE 754 representation is not exact (`0.1+0.2 != 0.3`). Use `math.Abs(a-b) < epsilon` — `1e-9` for general precision, `1e-2` for cents |
+| Dividing without a zero check | Integer division by zero panics; float division yields `±Inf` or `NaN`, which propagates silently and fails every comparison. Guard `divisor == 0` first |
 | Returning internal slice/map reference | Callers can mutate your struct's internals through the shared backing array. Return a defensive copy |
 | Multiple `init()` with ordering assumptions | `init()` execution order across files is unspecified. → See `samber/cc-skills-golang@golang-design-patterns` — use explicit constructors |
-| Blocking forever on nil channel | Nil channels block on both send and receive. Always initialize before use |
+| Blocking forever on nil channel | Nil channels block on both send and receive. Initialize before use — except when deliberately setting a channel to nil to disable its `select` case |
 
 ## Cross-References
 

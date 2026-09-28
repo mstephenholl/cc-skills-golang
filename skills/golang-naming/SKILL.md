@@ -6,7 +6,7 @@ license: MIT
 compatibility: Designed for Claude Code, Codex or similar harness, and for projects using Golang.
 metadata:
   author: samber
-  version: "1.2.2"
+  version: "1.2.3"
   openclaw:
     emoji: "🏷"
     homepage: https://github.com/samber/cc-skills-golang
@@ -23,58 +23,15 @@ paths:
 
 # Go Naming Conventions
 
-Go favors short, readable names. Capitalization controls visibility — uppercase is exported, lowercase is unexported. All identifiers MUST use MixedCaps, NEVER underscores.
-
 > "Clear is better than clever." — Go Proverbs
 >
 > "Design the architecture, name the components, document the details." — Go Proverbs
 
 To ignore a rule, just add a comment to the code.
 
-## Quick Reference
-
-| Element | Convention | Example |
-| --- | --- | --- |
-| Package | lowercase, single word, \_test suffix OK for test files | `json`, `http`, `tabwriter`, `http_test` |
-| File | lowercase, underscores OK | `user_handler.go` |
-| Exported name | UpperCamelCase | `ReadAll`, `HTTPClient` |
-| Unexported | lowerCamelCase | `parseToken`, `userCount` |
-| Interface | method name + `-er` | `Reader`, `Closer`, `Stringer` |
-| Struct | MixedCaps noun | `Request`, `FileHeader` |
-| Constant | MixedCaps (not ALL_CAPS) | `MaxRetries`, `defaultTimeout` |
-| Receiver | 1-2 letter abbreviation | `func (s *Server)`, `func (b *Buffer)` |
-| Error variable | `Err` prefix | `ErrNotFound`, `ErrTimeout` |
-| Error type | `Error` suffix | `PathError`, `SyntaxError` |
-| Constructor | `New` (single type) or `NewTypeName` (multi-type) | `ring.New`, `http.NewRequest` |
-| Boolean field | `is`, `has`, `can` prefix on **fields** and methods | `isReady`, `IsConnected()` |
-| Test function | `Test` + function name | `TestParseToken` |
-| Acronym | all caps or all lower | `URL`, `HTTPServer`, `xmlParser` |
-| Variant: context | `WithContext` suffix | `FetchWithContext`, `QueryContext` |
-| Variant: in-place | `In` suffix | `SortIn()`, `ReverseIn()` |
-| Variant: error | `Must` prefix | `MustParse()`, `MustLoadConfig()` |
-| Option func | `With` + field name | `WithPort()`, `WithLogger()` |
-| Enum (iota) | type name prefix, zero-value = unknown | `StatusUnknown` at 0, `StatusReady` |
-| Named return | descriptive, for docs only | `(n int, err error)` |
-| Error string | lowercase (incl. acronyms), no punctuation | `"image: unknown format"`, `"invalid id"` |
-| Import alias | short, only on collision | `mrand "math/rand"`, `pb "app/proto"` |
-| Format func | `f` suffix | `Errorf`, `Wrapf`, `Logf` |
-| Test table fields | `got`/`expected` prefixes | `input string`, `expected int` |
-
 ## MixedCaps
 
-All Go identifiers MUST use `MixedCaps` (or `mixedCaps`). NEVER use underscores in identifiers — the only exceptions are test function subcases (`TestFoo_InvalidInput`), generated code, and OS/cgo interop. This is load-bearing, not cosmetic — Go's export mechanism relies on capitalization, and tooling assumes MixedCaps throughout.
-
-```go
-// ✓ Good
-MaxPacketSize
-userCount
-parseHTTPResponse
-
-// ✗ Bad — these conventions conflict with Go's export mechanism and tooling expectations
-MAX_PACKET_SIZE   // C/Python style
-max_packet_size   // snake_case
-kMaxBufferSize    // Hungarian notation
-```
+Use `MixedCaps` for every identifier, constants included (`MaxPacketSize`, not `MAX_PACKET_SIZE` or `kMaxBufferSize`) — capitalization is Go's export mechanism, not emphasis, and tooling assumes it throughout. Underscores belong only in test subcase functions (`TestFoo_InvalidInput`), generated code, and OS/cgo interop.
 
 ## Avoid Stuttering
 
@@ -107,54 +64,43 @@ These conventions are correct but non-obvious — they are the most common sourc
 
 **Error strings are fully lowercase — including acronyms.** Write `"invalid message id"` not `"invalid message ID"`, because error strings are often concatenated with other context (`fmt.Errorf("parsing token: %w", err)`) and mixed case looks wrong mid-sentence. Sentinel errors should include the package name as prefix: `errors.New("apiclient: not found")`.
 
-**Enum zero values:** Always place an explicit `Unknown`/`Invalid` sentinel at iota position 0. A `var s Status` silently becomes 0 — if that maps to a real state like `StatusReady`, code can behave as if a status was deliberately chosen when it wasn't.
+**Enum zero values:** Prefix values with the type name (`StatusReady`) and place an explicit `Unknown`/`Invalid` sentinel at iota position 0, or start at `iota + 1`. A `var s Status` silently becomes 0 — if that maps to a real state like `StatusReady`, code can behave as if a status was deliberately chosen when it wasn't.
 
 **Subtest names:** Table-driven test case names in `t.Run()` should be fully lowercase descriptive phrases: `"valid id"`, `"empty input"` — not `"valid ID"` or `"Valid Input"`.
-
-## Detailed Categories
-
-For complete rules, examples, and rationale, see:
-
-- **[Packages, Files & Import Aliasing](./references/packages-files.md)** — Package naming (single word, lowercase, no plurals), file naming conventions, import alias patterns (only use on collision to avoid cognitive load), and directory structure.
-
-- **[Variables, Booleans, Receivers & Acronyms](./references/identifiers.md)** — Scope-based naming (length matches scope: `i` for 3-line loops, longer names for package-level), single-letter receiver conventions (`s` for Server), acronym casing (URL not Url, HTTPServer not HttpServer), and boolean naming patterns (isReady, hasPrefix).
-
-- **[Functions, Methods & Options](./references/functions-methods.md)** — Getter/setter patterns (Go omits `Get` so `user.Name()` reads naturally), constructor conventions (`New` or `NewTypeName`), named returns (for documentation only), format function suffixes (`Errorf`, `Wrapf`), and functional options (`WithPort`, `WithLogger`).
-
-- **[Types, Constants & Errors](./references/types-errors.md)** — Interface naming (`Reader`, `Closer` suffix with `-er`), struct naming (nouns, MixedCaps), constants (MixedCaps, not ALL_CAPS), enums (type name prefix like `StatusReady`), sentinel errors (`ErrNotFound` variables), error types (`PathError` suffix), and error message conventions (lowercase, no punctuation).
-
-- **[Test Naming](./references/testing.md)** — Test function naming (`TestFunctionName`), table-driven test field conventions (`input`, `expected`), test helper naming, and subcase naming patterns.
 
 ## Common Mistakes
 
 | Mistake | Fix |
 | --- | --- |
-| `ALL_CAPS` constants | Go reserves casing for visibility, not emphasis — use `MixedCaps` (`MaxRetries`) |
 | `GetName()` getter | Go omits `Get` because `user.Name()` reads naturally at call sites. But `Is`/`Has`/`Can` prefixes are kept for boolean predicates: `IsHealthy() bool` not `Healthy() bool` |
 | `Url`, `Http`, `Json` acronyms | Mixed-case acronyms create ambiguity (`HttpsUrl` — is it `Https+Url`?). Use all caps or all lower |
 | `this` or `self` receiver | Go methods are called frequently — use 1-2 letter abbreviation (`s` for `Server`) to reduce visual noise |
-| `util`, `helper` packages | These names say nothing about content — use specific names that describe the abstraction |
-| `http.HTTPClient` stuttering | Package name is always present at call site — `http.Client` avoids reading "HTTP" twice |
-| `user.NewUser()` constructor | Single primary type uses `New()` — `user.New()` avoids repeating the type name |
-| `connected bool` field | Bare adjective is ambiguous — use `isConnected` so the field reads as a true/false question |
-| `"invalid message ID"` error | Error strings must be fully lowercase including acronyms — `"invalid message id"` |
-| `StatusReady` at iota 0 | Zero value should be a sentinel — `StatusUnknown` at 0 catches uninitialized values |
-| `"not found"` error string | Sentinel errors should include the package name — `"mypackage: not found"` identifies the origin |
-| `userSlice` type-in-name | Types encode implementation detail — `users` describes what it holds, not how |
 | Inconsistent receiver names | Switching names across methods of the same type confuses readers — use one name consistently |
-| `snake_case` identifiers | Underscores conflict with Go's MixedCaps convention and tooling expectations — use `mixedCaps` |
-| Long names for short scopes | Name length should match scope — `i` is fine for a 3-line loop, `userIndex` is noise |
+| `util`, `helper` packages | These names say nothing about content — use specific names that describe the abstraction |
+| Plural, underscored or MixedCaps package names | Go convention is a singular, lowercase single word (`net/url`, not `net/urls` or `url_parser`) — keeps import paths consistent |
+| `ErrAPIResponse` error type | The `Err` prefix marks sentinel error variables (`ErrNotFound`); error types take the `Error` suffix (`APIError`, `PathError`) |
+| `userSlice` type-in-name | Types encode implementation detail — `users` describes what it holds, not how |
+| Long names for short scopes | Name length should match scope — `i` is fine for a 3-line loop, `userIndex` is noise; a package-level `t` is too cryptic |
 | Naming constants by value | Values change, roles don't — `DefaultPort` survives a port change, `Port8080` doesn't |
 | `FetchCtx()` context variant | `WithContext` is the standard Go suffix — `FetchWithContext()` is instantly recognizable |
 | `sort()` in-place but no `In` | Readers assume functions return new values. `SortIn()` signals mutation |
 | `parse()` panicking on error | `MustParse()` warns callers that failure panics — surprises belong in the name |
 | Mixing `With*`, `Set*`, `Use*` | Consistency across the codebase — `With*` is the Go convention for functional options |
-| Plural package names | Go convention is singular (`net/url` not `net/urls`) — keeps import paths consistent |
 | `Wrapf` without `f` suffix | The `f` suffix signals format-string semantics — `Wrapf`, `Errorf` tell callers to pass format args |
 | Unnecessary import aliases | Aliases add cognitive load. Only alias on collision — `mrand "math/rand"` |
 | Inconsistent concept names | Using `user`/`account`/`person` for the same concept forces readers to track synonyms — pick one name |
 
-Applying these fixes means renaming existing identifiers — → See `samber/cc-skills-golang@golang-gopls` skill to do it safely: its rename updates every call site across the workspace and refuses a rename that would break interface satisfaction, which a grep/sed or manual Edit-based rename silently misses.
+Applying these fixes means renaming existing identifiers — → See `samber/cc-skills-golang@golang-gopls` skill to do it safely: its rename updates every call site across the workspace and refuses a rename that would break interface satisfaction, which a grep/sed or manual find-and-replace rename silently misses.
+
+## References
+
+Read the reference that matches the name you are choosing:
+
+- [references/packages-files.md](./references/packages-files.md) — when naming a package or file, or adding an import alias
+- [references/identifiers.md](./references/identifiers.md) — when naming variables, boolean fields, receivers, or identifiers containing acronyms
+- [references/functions-methods.md](./references/functions-methods.md) — when naming functions, getters/setters, constructors, functional options, or deciding on named returns
+- [references/types-errors.md](./references/types-errors.md) — when naming an interface, struct, constant, enum, or error
+- [references/testing.md](./references/testing.md) — when naming tests, subtests, table fields, or test helpers
 
 ## Enforce with Linters
 

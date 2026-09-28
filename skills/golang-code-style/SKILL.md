@@ -6,7 +6,7 @@ license: MIT
 compatibility: Designed for Claude Code, Codex or similar harness, and for projects using Golang.
 metadata:
   author: samber
-  version: "1.3.1"
+  version: "1.3.2"
   openclaw:
     emoji: "🎨"
     homepage: https://github.com/samber/cc-skills-golang
@@ -19,13 +19,13 @@ paths:
   - "**/*.go"
 ---
 
-**Orchestration mode:** Fan out the sub-agents described in the "Parallelizing Code Style Reviews" section, each covering an independent style concern, when reviewing code style across a large codebase, and merge their findings. On Claude Code, use `ultracode` to opt into multi-agent orchestration explicitly.
+**Orchestration mode:** For a style review across a large codebase, fan out parallel sub-agents split by package — every rule here applies file-locally, so packages review independently — and consolidate into one list of findings with file:line, grouped by rule. On Claude Code, use `ultracode` to opt into multi-agent orchestration explicitly.
 
 > **Community default.** A company skill that explicitly supersedes `samber/cc-skills-golang@golang-code-style` skill takes precedence.
 
 # Go Code Style
 
-Style rules that require human judgment — linters handle formatting, this skill handles clarity. For naming see `samber/cc-skills-golang@golang-naming` skill; for design patterns see `samber/cc-skills-golang@golang-design-patterns` skill; for struct/interface design see `samber/cc-skills-golang@golang-structs-interfaces` skill.
+Style rules that require human judgment — linters handle formatting, this skill handles clarity.
 
 > "Clear is better than clever." — Go Proverbs
 
@@ -63,11 +63,10 @@ var buf bytes.Buffer       // zero value is ready to use
 
 ### Slice & Map Initialization
 
-Slices and maps MUST be initialized explicitly, never nil. Nil maps panic on write; nil slices serialize to `null` in JSON (vs `[]` for empty slices), surprising API consumers.
+Initialize a slice explicitly (`[]T{}` or `make`) when it can reach an encoder or an API response — a nil slice encodes as JSON `null`, not `[]`, which surprises consumers — and initialize a map before writing to it, since a nil map panics on write. A local `var s []T` that only accumulates through `append` is idiomatic; `len`, `range` and map lookups are safe on nil.
 
 ```go
-users := []User{}                       // always initialized
-m := map[string]int{}                   // always initialized
+users := []User{}                       // returned from an API handler: encodes as []
 users := make([]User, 0, len(ids))      // preallocate when capacity is known
 m := make(map[string]int, len(items))   // preallocate when size is known
 ```
@@ -76,40 +75,16 @@ Do not preallocate speculatively — `make([]T, 0, 1000)` wastes memory when the
 
 ### Composite Literals
 
-Composite literals MUST use field names — positional fields break when the type adds or reorders fields:
-
-```go
-srv := &http.Server{
-    Addr:         ":8080",
-    ReadTimeout:  5 * time.Second,
-    WriteTimeout: 10 * time.Second,
-}
-```
+Composite literals MUST use field names — positional fields break when the type adds or reorders fields.
 
 ## Control Flow
 
-### Reduce Nesting
+- **Errors and edge cases MUST be handled first, then return or `continue`** — the happy path stays at the lowest indentation; nested if-else buries the success path in the innermost block and every new check deepens it.
+- **Give a `switch` over one value a `default`** that handles or rejects unexpected values — without it, a newly added constant falls through silently.
 
-Errors and edge cases MUST be handled first (early return). Keep the happy path at minimal indentation:
+### Default-Then-Override Instead of `else`
 
-```go
-func process(data []byte) (*Result, error) {
-    if len(data) == 0 {
-        return nil, errors.New("empty data")
-    }
-
-    parsed, err := parse(data)
-    if err != nil {
-        return nil, fmt.Errorf("parsing: %w", err)
-    }
-
-    return transform(parsed), nil
-}
-```
-
-### Eliminate Unnecessary `else`
-
-When the `if` body ends with `return`/`break`/`continue`, the `else` MUST be dropped. Use default-then-override for simple assignments — assign a default, then override with independent conditions or a `switch`:
+When the `if` body ends with `return`/`break`/`continue`, the `else` MUST be dropped. For assignments, assign the default first, then override it with independent conditions or a tagless `switch` — an else-if chain hides which branch is the default:
 
 ```go
 // Good — default-then-override with switch (cleanest for mutually exclusive overrides)
@@ -131,42 +106,9 @@ if debug {
 }
 ```
 
-### Complex Conditions & Init Scope
+### Complex Conditions
 
-When an `if` condition has 3+ operands, MUST extract into named booleans — a wall of `||` is unreadable and hides business logic. Keep expensive checks inline for short-circuit benefit. [Details](./references/details.md)
-
-```go
-// Good — named booleans make intent clear
-isAdmin := user.Role == RoleAdmin
-isOwner := resource.OwnerID == user.ID
-isPublicVerified := resource.IsPublic && user.IsVerified
-if isAdmin || isOwner || isPublicVerified || permissions.Contains(PermOverride) {
-    allow()
-}
-```
-
-Scope variables to `if` blocks when only needed for the check:
-
-```go
-if err := validate(input); err != nil {
-    return err
-}
-```
-
-### Switch Over If-Else Chains
-
-When comparing the same variable multiple times, prefer `switch`:
-
-```go
-switch status {
-case StatusActive:
-    activate()
-case StatusInactive:
-    deactivate()
-default:
-    panic(fmt.Sprintf("unexpected status: %d", status))
-}
-```
+An `if` or `return` condition with 3+ operands MUST be extracted into named booleans that state the business rule (`isOwner`, `isPublicVerified`) — a wall of `||`/`&&` hides the policy it encodes. Exception: keep an expensive check inline and last, so short-circuit evaluation can skip it. For the before/after example and the short-circuit case, read [references/details.md](./references/details.md).
 
 ## Function Design
 
@@ -180,19 +122,9 @@ func FetchUser(ctx context.Context, id string) (*User, error)
 func SendEmail(ctx context.Context, msg EmailMessage) error  // grouped into struct
 ```
 
-### Prefer `range` for Iteration
-
-SHOULD use `range` over index-based loops. Use `range n` (Go 1.22+) for simple counting.
-
-```go
-for _, user := range users {
-    process(user)
-}
-```
-
 ## Value vs Pointer Arguments
 
-Pass small types (`string`, `int`, `bool`, `time.Time`) by value. Use pointers when mutating, for large structs (~128+ bytes), or when nil is meaningful. [Details](./references/details.md)
+Pass small types (`string`, `int`, `bool`, `time.Time`) by value. Use pointers when mutating, for large structs (~128+ bytes), or when nil is meaningful. Read [references/details.md](./references/details.md) when a parameter's pointer-vs-value choice is unclear or performance-sensitive.
 
 ## Code Organization Within Files
 
@@ -201,7 +133,7 @@ Pass small types (`string`, `int`, `bool`, `time.Time`) by value. Use pointers w
 - **One primary type per file** when it has significant methods
 - **Blank imports** (`_ "pkg"`) register side effects (init functions). Restricting them to `main` and test packages makes side effects visible at the application root, not hidden in library code
 - **Dot imports** pollute the namespace and make it impossible to tell where a name comes from — never use in library code
-- **Unexport aggressively** — you can always export later; unexporting is a breaking change. → See `samber/cc-skills-golang@golang-gopls` skill to unexport safely — its rename updates every call site atomically and refuses the change when lowercasing a method would break interface satisfaction, a breakage grep/sed silently ships.
+- **Unexport aggressively** — you can always export later; unexporting is a breaking change, and every exported name is a commitment. → See `samber/cc-skills-golang@golang-gopls` skill to unexport safely — its rename updates every call site atomically and refuses the change when lowercasing a method would break interface satisfaction, a breakage grep/sed silently ships.
 
 ## String Handling
 
@@ -221,11 +153,6 @@ func Contains[T comparable](slice []T, target T) bool  // not []any
 - **Use `slices` and `maps` standard packages**; for filter/group-by/chunk, use `github.com/samber/lo`
 - **"Reflection is never clear"** — avoid `reflect` unless necessary
 - **Don't abstract prematurely** — extract when the pattern is stable
-- **Minimize public surface** — every exported name is a commitment
-
-## Parallelizing Code Style Reviews
-
-When reviewing code style across a large codebase, use up to 5 parallel sub-agents, each targeting an independent style concern (e.g. control flow, function design, variable declarations, string handling, code organization).
 
 ## Enforce with Linters
 

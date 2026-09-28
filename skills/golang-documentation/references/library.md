@@ -196,13 +196,13 @@ Follow the [Diataxis framework](https://diataxis.fr/) for organizing documentati
 
 ### llms.txt
 
-Add a `llms.txt` file at the repository root to help AI agents understand your project. Copy the template from [templates/llms.txt](./templates/llms.txt).
+Add a `llms.txt` file at the repository root to help AI agents understand your project. Copy the template from [templates/llms.txt](../assets/templates/llms.txt).
 
 This is an emerging convention for making projects AI-friendly. Place it alongside your README.
 
 ### Register for Discoverability
 
-Make your library findable by AI agents and documentation aggregators:
+Make a public library findable by AI agents and documentation aggregators. Suggest these to the maintainer rather than submitting on their behalf — registration publishes the repository's docs to a third party, so never submit a private library:
 
 - **Context7** — <https://context7.com> — submit your library for inclusion in AI-accessible documentation
 - **DeepWiki** — <https://deepwiki.com> — auto-generates wiki-style docs from GitHub repos
