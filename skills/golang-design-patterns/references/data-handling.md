@@ -12,9 +12,9 @@ func AllUsers(db *sql.DB) ([]User, error) {
 }
 
 // Good — iterator yields one at a time
-func AllUsers(db *sql.DB) iter.Seq2[User, error] {
+func (r *UserRepo) AllUsers(ctx context.Context) iter.Seq2[User, error] {
     return func(yield func(User, error) bool) {
-        rows, err := db.Query("SELECT * FROM users")
+        rows, err := r.db.QueryContext(ctx, "SELECT id, name, email FROM users")
         if err != nil {
             yield(User{}, err)
             return
@@ -31,6 +31,9 @@ func AllUsers(db *sql.DB) iter.Seq2[User, error] {
                 return
             }
         }
+        if err := rows.Err(); err != nil { // iteration can stop early on a network or driver error
+            yield(User{}, err)
+        }
     }
 }
 ```
@@ -45,16 +48,17 @@ func (h *Handler) ExportUsers(w http.ResponseWriter, r *http.Request) {
     w.Header().Set("Content-Type", "application/json")
     w.Write([]byte("["))
 
+    enc := json.NewEncoder(w)
     first := true
     for user, err := range h.repo.AllUsers(r.Context()) {
         if err != nil {
-            slog.Error("streaming user", "error", err)
+            slog.Error("streaming user", "error", err) // headers are sent: the client sees truncated JSON
             return
         }
         if !first {
             w.Write([]byte(","))
         }
-        json.NewEncoder(w).Encode(user)
+        enc.Encode(user)
         first = false
     }
 

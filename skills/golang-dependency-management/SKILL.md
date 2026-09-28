@@ -6,7 +6,7 @@ license: MIT
 compatibility: Designed for Claude Code, Codex or similar harness, and for projects using Golang.
 metadata:
   author: samber
-  version: "1.3.3"
+  version: "1.3.4"
   openclaw:
     emoji: "📦"
     homepage: https://github.com/samber/cc-skills-golang
@@ -29,119 +29,46 @@ allowed-tools: Read Edit Write Glob Grep Bash(go:*) Bash(golangci-lint:*) Bash(g
 
 # Go Dependency Management
 
-## AI Agent Rule: Ask Before Adding Dependencies
+## Adding a Module
 
-**Before running `go get` to add any new dependency, AI agents MUST ask the user for confirmation.** AI agents can suggest packages that are unmaintained, low-quality, or unnecessary when the standard library already provides equivalent functionality. Upgrading a dependency already in `go.mod` needs no confirmation, but it is not risk-free — review it as described under [Upgrading](#upgrading).
+**Adding a module is a supply-chain decision.** Before `go get` or `go get -tool` pulls in a module not already in `go.mod`, confirm with the user, giving a one-line case: what it does, why the standard library doesn't cover it, its license, and the alternatives. Skip confirmation when the user named that exact module path — verify it's the canonical path (not a typosquat), add it, and report the version. Upgrading, downgrading or removing modules already required, and `go mod tidy`, need no confirmation; do flag major-version bumps and any new transitive module an upgrade pulls in.
 
-Before proposing a dependency, evaluate:
+Before proposing a module, check:
 
 - Does the standard library already cover the use case?
 - Is the license compatible?
 - Are there well-known alternatives?
 - What it does and why it's needed?
 
-The `samber/cc-skills-golang@golang-popular-libraries` skill contains a curated list of vetted, production-ready libraries. Prefer recommending packages from that list. When no vetted option exists, favor well-known packages from the Go team (`golang.org/x/...`) or established organizations over obscure alternatives.
+The `samber/cc-skills-golang@golang-popular-libraries` skill contains a curated list of vetted, production-ready libraries — prefer those. When no vetted option exists, favor the Go team's `golang.org/x/...` modules or established organizations over obscure alternatives. When choosing a version for a new module, its versions, importers and known vulnerabilities are on pkg.go.dev → See `samber/cc-skills-golang@golang-pkg-go-dev` skill.
 
 ## Key Rules
 
 - `go.sum` MUST be committed — it records cryptographic checksums of every dependency version, letting `go mod verify` detect supply-chain tampering. Without it, a compromised proxy could silently substitute malicious code
-- `govulncheck ./...` or `go tool govulncheck ./...` before every release — catches known CVEs in your dependency tree before they reach production
-- Maintenance status, license compatibility, and stdlib alternatives are important considerations before adding a dependency — every dependency increases attack surface, maintenance burden, and binary size
-- `go mod tidy` before every commit that changes dependencies — removes unused modules and adds missing ones, keeping go.mod honest
+- `go mod tidy` before every commit that changes dependencies — removes unused modules and adds missing ones, keeping `go.mod` honest
+- `govulncheck ./...` (or `go tool govulncheck ./...`) after upgrades and before every release — catches known CVEs in your dependency tree before they reach production
+- Vendor (`go mod vendor`, commit `vendor/`) only when builds must be hermetic or run without module-proxy access — then re-vendor after every dependency change
 
-## go.mod & go.sum
+## Upgrading
 
-### Essential Commands
-
-| Command           | Purpose                                      |
-| ----------------- | -------------------------------------------- |
-| `go mod tidy`     | Add missing deps, remove unused ones         |
-| `go mod download` | Download modules to local cache              |
-| `go mod verify`   | Verify cached modules match go.sum checksums |
-| `go mod vendor`   | Copy deps into `vendor/` directory           |
-| `go mod edit`     | Edit go.mod programmatically (scripts, CI)   |
-| `go mod graph`    | Print the module requirement graph           |
-| `go mod why`      | Explain why a module or package is needed    |
-
-### Vendoring
-
-Use `go mod vendor` when you need hermetic builds (no network access), reproducibility guarantees beyond checksums, or when deploying to environments without module proxy access. CI pipelines and Docker builds sometimes benefit from vendoring. Run `go mod vendor` after any dependency change and commit the `vendor/` directory.
-
-## Installing & Upgrading Dependencies
-
-### Adding a Dependency
-
-```bash
-go get github.com/google/uuid          # Latest version
-go get github.com/google/uuid@v1.6.0   # Specific version
-go get github.com/google/uuid@latest   # Explicitly latest
-go get github.com/google/uuid@<commit> # Specific commit (pseudo-version)
-```
-
-Before pinning a version, inspect the module's available versions, importers, and known vulnerabilities on pkg.go.dev → See `samber/cc-skills-golang@golang-pkg-go-dev` skill.
-
-### Upgrading
-
-```bash
-go get -u ./...            # Upgrade ALL direct+indirect deps to latest minor/patch
-go get -u=patch ./...      # Upgrade to latest patch only (safer)
-go get github.com/pkg@v1.5 # Upgrade specific package
-```
-
-**Prefer `go get -u=patch`** for routine updates. Patch and minor updates are usually lower risk than major upgrades, but still require review. For dependency updates, run:
-
-```bash
-go get -u=patch ./...
-go mod tidy
-go test ./...
-go vet ./...
-govulncheck ./...   # or: go tool govulncheck ./...
-```
+Default to `go get -u=patch ./...` for routine updates — patch releases carry no API changes under semver, while `go get -u ./...` also takes minor releases, which can change behavior. Both skip test-only dependencies; add `-t` (`go get -u -t ./...`) to include them.
 
 Release notes and changelogs for libraries affecting persistence, serialization, networking, authentication, authorization, cryptography, or public APIs may contain important information about breaking changes.
 
-### Removing a Dependency
-
-```bash
-go get github.com/google/uuid@none  # Mark for removal
-go mod tidy                          # Clean up go.mod and go.sum
-```
-
-### Installing CLI Tools
+## CLI Tools: `tool` Directives
 
 For Go 1.24+ modules, pin executable tools in `go.mod` with `tool` directives. Do not create a new `tools.go` blank-import file unless the module must support Go <1.24.
 
 ```bash
-# Add tools to the current module.
 go get -tool github.com/golangci/golangci-lint/v2/cmd/golangci-lint@latest
 go get -tool golang.org/x/vuln/cmd/govulncheck@latest
-go get -tool golang.org/x/perf/cmd/benchstat@latest
 
-# Run pinned tools reproducibly.
-go tool golangci-lint run ./...
+go tool golangci-lint run ./...   # run pinned tools reproducibly
 go tool govulncheck ./...
-go tool benchstat old.txt new.txt
+go install tool                   # install all pinned tools into GOBIN when needed
 
-# Install all module-pinned tools into GOBIN/PATH when needed.
-go install tool
-
-# Update pinned tools deliberately, then review go.mod/go.sum.
-go get -u tool
-go mod tidy
-```
-
-`go.mod` shape for a module targeting Go 1.27 or newer. This is an example target, not a cap; keep the project's actual `go` directive and do not change it just to add tools.
-
-```go.mod
-module example.com/project
-
-go 1.27
-
-tool (
-    github.com/golangci/golangci-lint/v2/cmd/golangci-lint
-    golang.org/x/vuln/cmd/govulncheck
-    golang.org/x/perf/cmd/benchstat
-)
+go get -u tool                    # update pinned tools deliberately,
+go mod tidy                       # then review the go.mod/go.sum diff
 ```
 
 For `go 1.27` or newer, `go mod tidy` auto-merges duplicate `require` blocks and enforces a two-block layout (direct dependencies, then indirect), preserving existing comments — no manual cleanup needed after a merge that introduces a second `require` block.
@@ -159,69 +86,21 @@ import (
 )
 ```
 
-Rule: Go 1.24+ = `tool` directives. Go <1.24 = `tools.go` fallback.
+## The `go` Directive
 
-### Module target note
-
-When using a newer toolchain, `go mod init` may create a module with an older default `go` directive. If the project intentionally targets the newer toolchain's APIs, update the directive deliberately:
-
-```bash
-go mod edit -go=1.27
-go mod tidy
-```
-
-For future Go versions, use the project's intended target version. Do not use APIs newer than the module's `go` directive until the project explicitly agrees to upgrade it.
+Keep the project's `go` directive as it is — adding tools or dependencies is no reason to change it, and code must not use APIs newer than it until the project explicitly agrees to upgrade. A newer toolchain's `go mod init` may write an older default; when the project intentionally targets the newer toolchain's APIs, raise it deliberately with `go mod edit -go=1.27` followed by `go mod tidy`.
 
 ## Deep Dives
 
-- **[Versioning & MVS](./references/versioning.md)** — Semantic versioning rules (major.minor.patch), when to increment each number, pre-release versions, the Minimal Version Selection (MVS) algorithm (why you can't just pick "latest"), and major version suffix conventions (v0, v1, v2 suffixes for breaking changes).
-
-- **[Auditing Dependencies](./references/auditing.md)** — Vulnerability scanning with `govulncheck`, tracking outdated dependencies, analyzing which dependencies make the binary large (`goweight`), and distinguishing test-only vs binary dependencies to keep `go.mod` clean.
-
-- **[Dependency Conflicts & Resolution](./references/conflicts.md)** — Diagnosing version conflicts (what `go get` does when you request incompatible versions), resolution strategies (`replace` directives for local development, `exclude` for broken versions, `retract` for published versions that should be skipped), and workflows for conflicts across your dependency tree.
-
-- **[Go Workspaces](./references/workspaces.md)** — `go.work` files for multi-module development (e.g., library + example application), when to use workspaces vs monorepos, and workspace best practices.
-
-- **[Automated Dependency Updates](./references/automated-updates.md)** — Setting up Dependabot or Renovate for automatic dependency update PRs, auto-merge strategies (when to merge automatically vs require review), and handling security updates.
-
-- **[Visualizing the Dependency Graph](./references/visualization.md)** — `go mod graph` to inspect the full dependency tree, `modgraphviz` to visualize it, and interactive tools to find which dependency chains cause bloat.
+- Read [references/versioning.md](references/versioning.md) when reasoning about which version Go selects (Minimal Version Selection), semver bumps, pre-releases, or `/v2` major-version module paths.
+- Read [references/conflicts.md](references/conflicts.md) when resolving a version conflict or using `replace`, `exclude` (consumer side) or `retract` (author side).
+- Read [references/auditing.md](references/auditing.md) when checking whether a CVE is reachable from your code (`govulncheck`), listing outdated modules, or finding which dependencies bloat the binary.
+- Read [references/workspaces.md](references/workspaces.md) when developing several modules together with `go.work`, including what to commit.
+- Read [references/automated-updates.md](references/automated-updates.md) when configuring Dependabot or Renovate and their auto-merge policy.
+- Read [references/visualization.md](references/visualization.md) when tracing which dependency chain pulls a module in (`go mod graph`, `go mod why`, `modgraphviz`).
 
 ## Cross-References
 
 - → See `samber/cc-skills-golang@golang-continuous-integration` skill for Dependabot/Renovate CI setup
 - → See `samber/cc-skills-golang@golang-security` skill for vulnerability scanning with govulncheck
 - → See `samber/cc-skills-golang@golang-popular-libraries` skill for vetted library recommendations
-
-## Quick Reference
-
-```bash
-# Start a new module
-go mod init github.com/user/project
-
-# Add a dependency
-go get github.com/google/uuid@v1.6.0
-
-# Upgrade all deps (patch only, safer)
-go get -u=patch ./...
-
-# Remove unused deps
-go mod tidy
-
-# Check for vulnerabilities
-govulncheck ./...   # or: go tool govulncheck ./...
-
-# Check for outdated deps
-go list -u -m -json all | go-mod-outdated -update -direct
-
-# Analyze binary size by dependency
-goweight
-
-# Understand why a dep exists
-go mod why -m github.com/some/module
-
-# Visualize dependency graph
-go mod graph | modgraphviz | dot -Tpng -o deps.png
-
-# Verify checksums
-go mod verify
-```

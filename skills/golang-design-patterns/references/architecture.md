@@ -12,13 +12,13 @@
 
 ## Choose the Right Level of Architecture
 
-Architecture complexity MUST match project scope — don't over-architect small projects. When starting a new project, ask the developer what architecture they prefer:
+Match architecture complexity to project scope — layers a small project doesn't need cost indirection on every change. Follow the repo's existing structure; ask the developer only when picking an application-level architecture (clean/hexagonal/DDD) for a repo with no established layout:
 
 | Project Size | Recommended Approach |
 | --- | --- |
 | Script / small CLI (<500 lines) | Flat `main.go` + a few files, no layers |
 | Medium service (500-5K lines) | Simple layered: `handler/`, `service/`, `repository/` |
-| Large service / monolith (5K+ lines) | Clean architecture, hexagonal, or DDD — ask the team |
+| Large service / monolith (5K+ lines) | Clean architecture, hexagonal, or DDD |
 
 A 100-line CLI does not need a domain layer, ports and adapters, or dependency injection frameworks. Start simple and refactor when complexity demands it.
 

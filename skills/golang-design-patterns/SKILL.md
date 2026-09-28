@@ -6,7 +6,7 @@ license: MIT
 compatibility: Designed for Claude Code, Codex or similar harness, and for projects using Golang.
 metadata:
   author: samber
-  version: "1.2.3"
+  version: "1.2.4"
   openclaw:
     emoji: "🏗"
     homepage: https://github.com/samber/cc-skills-golang
@@ -23,61 +23,32 @@ paths:
 
 **Modes:**
 
-- **Design mode** — creating new APIs, packages, or application structure: ask the developer about their architecture preference before proposing patterns; favor the smallest pattern that satisfies the requirement.
-- **Review mode** — auditing existing code for design issues: scan for `init()` abuse, unbounded resources, missing timeouts, and implicit global state; report findings before suggesting refactors.
+- **Design mode** — creating new APIs, packages, or application structure: favor the smallest pattern that satisfies the requirement and follow the repo's existing structure. Ask only when picking an application-level architecture (clean/hexagonal/DDD) for a repo with no established layout. Done when the design builds against its callers and the rules below hold.
+- **Review mode** — auditing existing code for design issues: look for `init()` abuse, implicit global state, unbounded resources, missing timeouts, and dropped close/flush errors on write paths. Rank findings by impact with file:line; if the user asked for fixes, apply them.
 
 > **Community default.** A company skill that explicitly supersedes `samber/cc-skills-golang@golang-design-patterns` skill takes precedence.
 
 # Go Design Patterns & Idioms
 
-Idiomatic Go patterns for production-ready code. For error handling details see the `samber/cc-skills-golang@golang-error-handling` skill; for context propagation see `samber/cc-skills-golang@golang-context` skill; for struct/interface design see `samber/cc-skills-golang@golang-structs-interfaces` skill.
+## Rules
 
-## Best Practices Summary
+1. **Enum zero value is a sentinel** — name `iota` 0 `Unknown` (or skip it) and start real values at 1, because Go's zero value otherwise passes silently as the first business value: an unset `OrderStatus` reads as `Pending`.
+2. **Avoid `init()` and mutable globals** — `init()` cannot return errors (it must panic or `log.Fatal`), runs before `main()` and before every test so its side effects make tests unpredictable, and multiple `init()` functions run across files in filename order. Build dependencies in explicit constructors (`NewUserRepository(db)`) called from `main`.
+3. **Explicit defaults** — set defaults in the constructor, not through `default:"8080"` struct tags read by reflection, because readers can't see behavior hidden in tags without knowing the library.
+4. **`runtime.AddCleanup` over `runtime.SetFinalizer`** (Go 1.24+) — it allows several cleanups per object, runs even when the object sits in a cycle, and the cleanup receives a copy of a value rather than the object, so nothing can resurrect it.
+5. **Surface close/flush errors on write resources** — `defer f.Close()` is fine for reads, but for files, `bufio.Writer`, gzip and network writers the final `Close`/`Flush` is where buffered data reaches disk or wire; dropping its error reports success on a truncated write.
+6. **Retries check the context between attempts** — wait with `select` on `ctx.Done()` and a timer rather than `time.Sleep`, and return `ctx.Err()` once cancelled, because a sleeping retry loop keeps working for a caller that already gave up.
+7. **Panic is for bugs, not expected errors** — return errors for anything a caller can handle (bad input, a missing config field, I/O failure); panic on violated invariants (nil where the contract forbids it) and in `Must*` constructors called at init time with constant input.
+8. **Compile regexps once, at package level** with `regexp.MustCompile` — compilation is O(n) in the pattern and allocates, so per-call compilation dominates a hot handler.
+9. **Bound everything** — give every external call a timeout and every pool, queue and buffer a maximum size, because a slow upstream or an unbounded queue grows until the process hangs or runs out of memory.
+10. **Stream large transfers** — iterate rows (`rows.Next()` or an `iter.Seq2`) and encode each record straight to the writer instead of collecting millions into a slice, which keeps memory constant instead of risking OOM.
 
-1. Constructors SHOULD use **functional options** — they scale better as APIs evolve (one function per option, no breaking changes)
-2. Functional options MUST **return an error** if validation can fail — catch bad config at construction, not at runtime
-3. **Avoid `init()`** — runs implicitly, cannot return errors, makes testing unpredictable. Use explicit constructors
-4. Enums SHOULD **start at 1** (or Unknown sentinel at 0) — Go's zero value silently passes as the first enum member
-5. Error cases MUST be **handled first** with early return — keep happy path flat
-6. **Panic is for bugs, not expected errors** — callers can handle returned errors; panics crash the process
-7. **`defer Close()` immediately after opening** — later code changes can accidentally skip cleanup
-8. **`runtime.AddCleanup`** over `runtime.SetFinalizer` — finalizers are unpredictable and can resurrect objects
-9. Every external call SHOULD **have a timeout** — a slow upstream hangs your goroutine indefinitely
-10. **Limit everything** (pool sizes, queue depths, buffers) — unbounded resources grow until they crash
-11. Retry logic MUST **check context cancellation** between attempts
-12. **Use `strings.Builder`** for concatenation in loops → see `samber/cc-skills-golang@golang-code-style`
-13. string vs []byte: **use `[]byte` for mutation and I/O**, `string` for display and keys — conversions allocate
-14. Iterators (Go 1.23+): **use for lazy evaluation** — avoid loading everything into memory
-15. **Stream large transfers** — loading millions of rows causes OOM; stream keeps memory constant
-16. `//go:embed` for **static assets** — embeds at compile time, eliminates runtime file I/O errors
-17. **Use `crypto/rand`** for keys/tokens — `math/rand` is predictable → see `samber/cc-skills-golang@golang-security`
-18. Regexp MUST be **compiled once at package level** — compilation is O(n) and allocates
-19. Compile-time interface checks: **`var _ Interface = (*Type)(nil)`**
-20. **A little recode > a big dependency** — each dep adds attack surface and maintenance burden
-21. **Design for testability** — accept interfaces, inject dependencies
+## Constructors: functional options vs builder
 
-## Constructor Patterns: Functional Options vs Builder
-
-### Functional Options (Preferred)
+Default to functional options when optional config will grow — each option is one `With*` function, so adding one never breaks callers. Use a builder only when configuration steps must validate against each other. When any option can fail validation, give the option type an error return so bad config fails at construction, not at first use:
 
 ```go
-type Server struct {
-    addr         string
-    readTimeout  time.Duration
-    writeTimeout time.Duration
-    maxConns     int
-}
-
-// Option returns an error so invalid config fails at construction, not at runtime
 type Option func(*Server) error
-
-func WithReadTimeout(d time.Duration) Option {
-    return func(s *Server) error { s.readTimeout = d; return nil }
-}
-
-func WithWriteTimeout(d time.Duration) Option {
-    return func(s *Server) error { s.writeTimeout = d; return nil }
-}
 
 func WithMaxConns(n int) Option {
     return func(s *Server) error {
@@ -90,13 +61,7 @@ func WithMaxConns(n int) Option {
 }
 
 func NewServer(addr string, opts ...Option) (*Server, error) {
-    // Default options
-    s := &Server{
-        addr:         addr,
-        readTimeout:  5 * time.Second,
-        writeTimeout: 10 * time.Second,
-        maxConns:     100,
-    }
+    s := &Server{addr: addr, readTimeout: 5 * time.Second, maxConns: 100} // defaults before options
     for _, opt := range opts {
         if err := opt(s); err != nil {
             return nil, err
@@ -104,185 +69,32 @@ func NewServer(addr string, opts ...Option) (*Server, error) {
     }
     return s, nil
 }
-
-// Usage
-srv, err := NewServer(":8080",
-    WithReadTimeout(30*time.Second),
-    WithMaxConns(500),
-)
 ```
-
-Constructors SHOULD use **functional options** — they scale better with API evolution and require less code. Use builder pattern only if you need complex validation between configuration steps.
-
-## Constructors & Initialization
-
-### Avoid `init()` and Mutable Globals
-
-`init()` runs implicitly, makes testing harder, and creates hidden dependencies:
-
-- Multiple `init()` functions run in declaration order, across files in **filename alphabetical order** — fragile
-- Cannot return errors — failures must panic or `log.Fatal`
-- Runs before `main()` and tests — side effects make tests unpredictable
-
-```go
-// Bad — hidden global state
-var db *sql.DB
-
-func init() {
-    var err error
-    db, err = sql.Open("postgres", os.Getenv("DATABASE_URL"))
-    if err != nil {
-        log.Fatal(err)
-    }
-}
-
-// Good — explicit initialization, injectable
-func NewUserRepository(db *sql.DB) *UserRepository {
-    return &UserRepository{db: db}
-}
-```
-
-### Enums: Start at 1
-
-Zero values should represent invalid/unset state:
-
-```go
-type Status int
-
-const (
-    StatusUnknown Status = iota // 0 = invalid/unset
-    StatusActive                // 1
-    StatusInactive              // 2
-    StatusSuspended             // 3
-)
-```
-
-### Compile Regexp Once
-
-```go
-// Good — compiled once at package level
-var emailRegex = regexp.MustCompile(`^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}$`)
-
-func ValidateEmail(email string) bool {
-    return emailRegex.MatchString(email)
-}
-```
-
-### Use `//go:embed` for Static Assets
-
-```go
-import "embed"
-
-//go:embed templates/*
-var templateFS embed.FS
-
-//go:embed version.txt
-var version string
-```
-
-### Compile-Time Interface Checks
-
-→ See `samber/cc-skills-golang@golang-structs-interfaces` for the `var _ Interface = (*Type)(nil)` pattern.
-
-## Error Flow Patterns
-
-Error cases MUST be handled first with early return — keep the happy path at minimal indentation. → See `samber/cc-skills-golang@golang-code-style` for the full pattern and examples.
-
-### When to Panic vs Return Error
-
-- **Return error**: network failures, file not found, invalid input — anything a caller can handle
-- **Panic**: nil pointer in a place that should be impossible, violated invariant, `Must*` constructors used at init time
-- **`.Close()` / `Flush()` errors**: read-only cleanup can often use `defer f.Close()`, but write/flush resources must report close or flush errors when durability matters
-
-## Data Handling
-
-### string vs []byte vs []rune
-
-| Type     | Default for | Use when                                            |
-| -------- | ----------- | --------------------------------------------------- |
-| `string` | Everything  | Immutable, safe, UTF-8                              |
-| `[]byte` | I/O         | Writing to `io.Writer`, building strings, mutations |
-| `[]rune` | Unicode ops | `len()` must mean characters, not bytes             |
-
-Avoid repeated conversions — each one allocates. Stay in one type until you need the other.
-
-### Iterators & Streaming for Large Data
-
-Use iterators (Go 1.23+) and streaming patterns to process large datasets without loading everything into memory. For large transfers between services (e.g., 1M rows DB to HTTP), stream to prevent OOM.
-
-For code examples, see [Data Handling Patterns](references/data-handling.md).
-
-## Resource Management
-
-`defer Close()` immediately after opening — don't wait, don't forget:
-
-```go
-f, err := os.Open(path)
-if err != nil {
-    return err
-}
-defer f.Close() // right here, not 50 lines later
-
-rows, err := db.QueryContext(ctx, query)
-if err != nil {
-    return err
-}
-defer rows.Close()
-```
-
-For graceful shutdown, resource pools, and `runtime.AddCleanup`, see [Resource Management](references/resource-management.md).
-
-## Resilience & Limits
-
-### Timeout Every External Call
-
-```go
-ctx, cancel := context.WithTimeout(ctx, 5*time.Second)
-defer cancel()
-
-resp, err := httpClient.Do(req.WithContext(ctx))
-```
-
-### Retry & Context Checks
-
-Retry logic MUST check `ctx.Err()` between attempts and use exponential/linear backoff via `select` on `ctx.Done()`. Long loops MUST check `ctx.Err()` periodically. → See `samber/cc-skills-golang@golang-context` skill.
-
-## Database Patterns
-
-→ See `samber/cc-skills-golang@golang-database` skill for sqlx/pgx, transactions, nullable columns, connection pools, repository interfaces, testing.
 
 ## Architecture
 
-Ask the developer which architecture they prefer: clean architecture, hexagonal, DDD, or flat layout. Don't impose complex architecture on a small project.
+Match the architecture to the project's size — a 200-line CLI is a flat `main.go` plus a few files, with no layers and no DI framework, and complexity gets added when the code demands it. Principles that hold regardless of style:
 
-Core principles regardless of architecture:
+- **Keep the domain pure** — no framework or infrastructure imports in the domain layer, so business rules test without a database.
+- **Validate at boundaries, trust inside** — check input in handlers, CLI parsing and consumers; re-validating the same data in service and repository layers clutters code without adding safety. Business rules still belong in the domain.
+- **Make illegal states unrepresentable** — a type with unexported fields and a validating constructor (`NewEmail`) means invalid values cannot reach the functions that accept it.
 
-- **Keep domain pure** — no framework dependencies in the domain layer
-- **Fail fast** — validate at boundaries, trust internal code
-- **Make illegal states unrepresentable** — use types to enforce invariants
-- **Respect 12-factor app** principles — → see `samber/cc-skills-golang@golang-project-layout`
-
-## Detailed Guides
-
-| Guide | Scope |
+| Read | When |
 | --- | --- |
-| [Architecture Patterns](references/architecture.md) | High-level principles, when each architecture fits |
-| [Clean Architecture](references/clean-architecture.md) | Use cases, dependency rule, layered adapters |
-| [Hexagonal Architecture](references/hexagonal-architecture.md) | Ports and adapters, domain core isolation |
-| [Domain-Driven Design](references/ddd.md) | Aggregates, value objects, bounded contexts |
-
-## Code Philosophy
-
-- **Avoid repetitive code** — but don't abstract prematurely
-- **Minimize dependencies** — a little recode > a big dependency
-- **Design for testability** — accept interfaces, inject dependencies, keep functions pure
+| [references/architecture.md](references/architecture.md) | Choosing a structure for a new project or sizing one to its scope |
+| [references/clean-architecture.md](references/clean-architecture.md) | Applying the dependency rule, use cases and layered adapters |
+| [references/hexagonal-architecture.md](references/hexagonal-architecture.md) | A service with several entry points (HTTP, gRPC, consumers) or several driven systems |
+| [references/ddd.md](references/ddd.md) | Modeling aggregates, value objects such as money, domain repositories, or bounded-context communication |
+| [references/resource-management.md](references/resource-management.md) | Writing a resource pool, GC-driven cleanup of native handles, or graceful shutdown |
+| [references/data-handling.md](references/data-handling.md) | Streaming a large result set or response with iterators |
 
 ## Cross-References
 
-- → See `samber/cc-skills-golang@golang-data-structures` skill for data structure selection, internals, and container/ packages
 - → See `samber/cc-skills-golang@golang-error-handling` skill for error wrapping, sentinel errors, and the single handling rule
 - → See `samber/cc-skills-golang@golang-structs-interfaces` skill for interface design and composition
-- → See `samber/cc-skills-golang@golang-concurrency` skill for goroutine lifecycle and graceful shutdown
 - → See `samber/cc-skills-golang@golang-context` skill for timeout and cancellation patterns
-- → See `samber/cc-skills-golang@golang-project-layout` skill for architecture and directory structure
-- → See `samber/cc-skills-golang@golang-refactoring` skill for safely staging a migration toward one of these patterns (options struct, DI, consumer-side interfaces) across an existing codebase
+- → See `samber/cc-skills-golang@golang-concurrency` skill for goroutine lifecycle
+- → See `samber/cc-skills-golang@golang-database` skill for queries, transactions, and connection pools
+- → See `samber/cc-skills-golang@golang-data-structures` skill for data structure selection and container/ packages
+- → See `samber/cc-skills-golang@golang-project-layout` skill for directory structure and 12-factor conventions
+- → See `samber/cc-skills-golang@golang-refactoring` skill for staging a migration toward one of these patterns (options struct, DI, consumer-side interfaces) across an existing codebase

@@ -6,7 +6,7 @@ license: MIT
 compatibility: Designed for Claude Code, Codex or similar harness, and for projects using Golang.
 metadata:
   author: samber
-  version: "1.3.4"
+  version: "1.3.5"
   openclaw:
     emoji: "💉"
     homepage: https://github.com/samber/cc-skills-golang
@@ -20,7 +20,7 @@ paths:
   - "**/*.go"
 ---
 
-**Persona:** You are a Go architect setting up dependency injection. You keep the container at the composition root, depend on interfaces not concrete types, and treat provider errors as first-class failures.
+**Persona:** You are a Go architect setting up dependency injection with samber/do. You keep the container at the composition root and let provider errors surface there.
 
 # Using samber/do for Dependency Injection in Go
 
@@ -41,118 +41,77 @@ This skill is not exhaustive — refer to library documentation and code example
 Install v2 — v1 is superseded and lacks the generics-based container, scopes, and lifecycle hooks documented below, so v1-era guidance misleads on every API in this skill:
 
 ```bash
-go get -u github.com/samber/do/v2
+go get github.com/samber/do/v2
 ```
 
-## Core Concepts
+## Registering Services
 
-### The Injector (Container)
+| Kind | Built | Register with |
+| --- | --- | --- |
+| **Lazy** (default) | On first invocation, then shared | `do.Provide` / `do.Lazy` in a package |
+| **Eager** | Before registration — you pass the built value | `do.ProvideValue` / `do.Eager` in a package |
+| **Transient** | On every invocation | `do.ProvideTransient` / `do.Transient` in a package |
+
+Lazy and transient services take a provider, `func(i do.Injector) (T, error)`:
 
 ```go
 import "github.com/samber/do/v2"
 
 injector := do.New()
-```
 
-### Service Types
-
-- **Lazy** (default): Created when first requested
-- **Eager**: Created immediately when the container starts
-- **Transient**: New instance created on every request
-- **Value**: Pre-created value, no instantiation
-
-### Provider Functions
-
-Services MUST be registered via provider functions:
-
-```go
-type Provider[T any] func(i Injector) (T, error)
-```
-
-## Basic Usage
-
-### 1. Define and Register Services
-
-Follow "Accept Interfaces, Return Structs":
-
-```go
-// Register a service (lazy by default)
-do.Provide(injector, func(i do.Injector) (Database, error) {
-    return &PostgreSQLDatabase{connString: "postgres://..."}, nil
+do.Provide(injector, func(i do.Injector) (*UserRepository, error) { // lazy
+    return NewUserRepository(do.MustInvoke[*sql.DB](i)), nil
 })
-
-// Register a pre-created value
-do.ProvideValue(injector, &Config{Port: 8080})
-
-// Register a transient service (new instance each time)
-do.ProvideTransient(injector, func(i do.Injector) (*Logger, error) {
-    return &Logger{}, nil
+do.ProvideValue(injector, cfg) // eager: already built
+do.ProvideTransient(injector, func(i do.Injector) (*RequestLogger, error) { // fresh per invocation
+    return NewRequestLogger(do.MustInvoke[*slog.Logger](i)), nil
 })
-
-// Register an eager service (created immediately at startup)
-do.ProvideValue(injector, &Config{Port: 8080})
 ```
 
-### 2. Invoke Services
+To make a provider-built service fail fast at boot (a database that must be reachable before serving), invoke it once in `main()` right after registration — or build it yourself and register the value.
 
-The container MUST only be accessed at the composition root:
+Return construction errors from providers rather than swallowing them — a provider that returns a half-built service crashes later, far from the cause.
 
-```go
-// Invoke with error handling — reserve for call sites outside the DI graph
-// (e.g. an HTTP handler that must degrade gracefully instead of crashing)
-db, err := do.Invoke[Database](injector)
+### Use `do.MustInvoke` inside providers
 
-// MustInvoke panics on error — preferred in providers, recovered by do.Invoke on the parent call
-db := do.MustInvoke[Database](injector)
-```
-
-Inside a provider function, always use `do.MustInvoke` (or `MustInvokeAs`/`MustInvokeNamed`/`MustInvokeStruct`) rather than the error-returning variant:
+Inside a provider, use `do.MustInvoke` (or `MustInvokeAs`/`MustInvokeNamed`/`MustInvokeStruct`) rather than the error-returning variant:
 
 - A provider already returns `(T, error)`, so propagating a dependency failure with `do.Invoke` costs an extra `if err != nil { return nil, err }` on every call.
 - `do.MustInvoke` panics instead, but samber/do correctly catches and recovers that panic at the enclosing `Invoke` call and converts it back into a regular error — this recover happens inside the library itself, not in caller code, so `MustInvoke` is safe to use inside providers.
 - The failure still surfaces as an error at the composition root, just without the manual boilerplate in every provider.
 
-### 3. Service Dependencies
+Reserve `do.Invoke` for call sites outside the graph that must degrade gracefully instead of crashing.
+
+### Keep the injector at the composition root
+
+Invoke services in `main()` and in providers only. Passing `do.Injector` into a handler or service turns it into a service locator: its dependencies disappear from the constructor signature and a missing one fails at call time. Resolve dependencies in the provider and pass them to a plain constructor.
+
+### Implicit aliasing (preferred)
+
+Register the concrete type — the provider returns `*PostgreSQLDatabase`, not the interface — and invoke it as the interface, with no alias registration:
 
 ```go
-func NewUserService(i do.Injector) (UserService, error) {
-    db := do.MustInvoke[Database](i)
-    cache := do.MustInvoke[Cache](i)
-    return &userService{db: db, cache: cache}, nil
-}
-
-do.Provide(injector, NewUserService)
-```
-
-### 4. Implicit Aliasing (Preferred)
-
-Register a concrete type and invoke as an interface without explicit aliasing:
-
-```go
-// Register concrete type
 do.Provide(injector, func(i do.Injector) (*PostgreSQLDatabase, error) {
     return &PostgreSQLDatabase{}, nil
 })
 
-// Invoke directly as interface (implicit aliasing)
-db := do.MustInvokeAs[Database](injector)
+db := do.MustInvokeAs[Database](injector) // first registered service implementing Database
 ```
 
-### 5. Named Services
+### Named services
 
-Register multiple services of the same type:
+Register several services of the same type under distinct names instead of wrapper types — a second `do.Provide` for the same type panics with "service has already been declared":
 
 ```go
-do.ProvideNamed(injector, "primary-db", func(i do.Injector) (*Database, error) {
-    return &Database{URL: "postgres://primary..."}, nil
-})
+do.ProvideNamed(injector, "primary-db", func(i do.Injector) (*sql.DB, error) { /* ... */ })
+do.ProvideNamed(injector, "replica-db", func(i do.Injector) (*sql.DB, error) { /* ... */ })
 
-mainDB := do.MustInvokeNamed[*Database](injector, "primary-db")
+primary := do.MustInvokeNamed[*sql.DB](injector, "primary-db")
 ```
 
 ## Package Organization
 
-Use `do.Package()` to organize service registration by module:
+Group registrations per layer with `do.Package()` and compose them in `do.New()`:
 
 ```go
 // infrastructure/package.go
@@ -161,73 +120,24 @@ var Package = do.Package(
         cfg := do.MustInvoke[*Config](i)
         return postgres.Connect(cfg.DatabaseURL)
     }),
-    do.Lazy(func(i do.Injector) (*redis.Client, error) {
-        cfg := do.MustInvoke[*Config](i)
-        return redis.NewClient(cfg.RedisURL), nil
-    }),
 )
 
 // main.go
-injector := do.New(infrastructure.Package, service.Package)
-```
-
-## Full Application Setup
-
-```go
 func main() {
-    injector := do.New(
-        infrastructure.Package,
-        repository.Package,
-        service.Package,
-        transport.Package,
-    )
+    injector := do.New(infrastructure.Package, repository.Package, service.Package, transport.Package)
 
     server := do.MustInvoke[*http.Server](injector)
     go server.ListenAndServe()
 
-    _ = injector.ShutdownOnSignalsWithContext(context.Background(), os.Interrupt)
+    // Blocks until a signal arrives, then shuts down built services that implement a Shutdown method
+    injector.ShutdownOnSignalsWithContext(context.Background(), syscall.SIGTERM, os.Interrupt)
 }
 ```
 
-## Best Practices
+## Going Further
 
-1. Depend on interfaces, not concrete types — lets you swap implementations in tests without touching production code
-2. Each service should have one job — services with multiple responsibilities are harder to test and harder to replace
-3. Keep dependency trees shallow — chains beyond 3-4 levels make initialization order fragile and errors harder to trace
-4. Handle errors in provider functions — a silently failing provider creates a broken service that crashes later in unexpected places
-5. Use scopes to organize services by lifecycle — request-scoped services prevent leaks, global services prevent redundant initialization
-6. Use `do.MustInvoke*` inside provider functions instead of `do.Invoke*` — samber/do correctly catches and recovers the panic at the outer `Invoke` call, turning it back into a returned error, so it's safe to use inside providers and you get the same error propagation without the boilerplate
-
-For scopes, lifecycle management, struct injection, and debugging, see [Advanced Usage](./references/advanced.md).
-
-For testing patterns (cloning, overrides, mocks), see [Testing](./references/testing.md).
-
-## Quick Reference
-
-### Registration
-
-| Function                        | Purpose                          |
-| ------------------------------- | -------------------------------- |
-| `do.Provide[T]()`               | Register lazy service (default)  |
-| `do.ProvideNamed[T]()`          | Register named lazy service      |
-| `do.ProvideValue[T]()`          | Register pre-created value       |
-| `do.ProvideNamedValue[T]()`     | Register named value             |
-| `do.ProvideTransient[T]()`      | Register new instance each time  |
-| `do.ProvideNamedTransient[T]()` | Register named transient service |
-| `do.Package()`                  | Group service registrations      |
-
-### Invocation
-
-| Function                   | Purpose                                   |
-| -------------------------- | ----------------------------------------- |
-| `do.Invoke[T]()`           | Get service (with error)                  |
-| `do.InvokeNamed[T]()`      | Get named service                         |
-| `do.InvokeAs[T]()`         | Get first service matching interface      |
-| `do.InvokeStruct[T]()`     | Inject into struct fields using tags      |
-| `do.MustInvoke[T]()`       | Get service (panic on error)              |
-| `do.MustInvokeNamed[T]()`  | Get named service (panic on error)        |
-| `do.MustInvokeAs[T]()`     | Get service by interface (panic on error) |
-| `do.MustInvokeStruct[T]()` | Inject into struct (panic on error)       |
+- Read [references/advanced.md](references/advanced.md) when adding per-request or per-module scopes, health checks, `Shutdown` methods, struct injection with `do:""` tags, explicit aliases, or debugging the graph — it also holds the full registration and invocation Quick Reference.
+- Read [references/testing.md](references/testing.md) when testing a service against mocks — clone the production container and override one boundary.
 
 ## Cross-References
 

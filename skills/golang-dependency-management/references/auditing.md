@@ -14,13 +14,6 @@ Go's `go.mod` does **not** distinguish between test-only and production dependen
 
 With `go 1.17` or higher in `go.mod`, Go prunes the module graph: transitive dependencies needed only for tests of other modules are excluded from the build graph. This reduces `go.mod` size and avoids downloading unnecessary modules.
 
-### Upgrading With or Without Test Dependencies
-
-```bash
-go get -u ./...       # Upgrade deps, EXCLUDING test-only deps
-go get -u -t ./...    # Upgrade deps, INCLUDING test-only deps
-```
-
 ### Impact on Binary Size
 
 To check whether a large dependency is actually linked into your binary (vs. only used in tests), use `goweight` or `go-size-analyzer` — if the package doesn't appear in the binary breakdown, it's test-only and not contributing to binary size.

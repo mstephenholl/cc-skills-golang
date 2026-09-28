@@ -6,7 +6,7 @@ license: MIT
 compatibility: Designed for Claude Code, Codex or similar harness, and for projects using Golang.
 metadata:
   author: samber
-  version: "1.2.3"
+  version: "1.2.4"
   openclaw:
     emoji: "🏭"
     homepage: https://github.com/samber/cc-skills-golang
@@ -59,46 +59,38 @@ What fx adds on top:
 
 **Choose fx** for long-running services (HTTP servers, workers, daemons) — lifecycle and signal handling are mandatory there, and modules make large service graphs manageable.
 
-**Choose raw dig** when you need wiring without a framework: CLI tools, libraries that expose a container to callers, test harnesses, or embedding DI into an existing app that manages its own lifecycle. See `samber/cc-skills-golang@golang-uber-dig` skill.
+**Choose raw dig** when you need wiring without a framework: one-shot CLI commands, libraries that expose a container to callers, test harnesses, or embedding DI into an existing app that manages its own lifecycle — fx's lifecycle and modules add nothing to a program that builds a graph, runs once, and exits. See `samber/cc-skills-golang@golang-uber-dig` skill.
 
 ## The Application
 
 ```go
-import "go.uber.org/fx"
-
 app := fx.New(
-    fx.Provide(NewLogger, NewDatabase, NewServer),
-    fx.Invoke(RegisterRoutes),
+    fx.Supply(cfg),                                  // pre-built values (flags, config, secrets)
+    fx.Provide(NewLogger, NewDatabase, NewServer),   // lazy constructors
+    fx.Invoke(RegisterRoutes, StartMetricsExporter), // always run during Start
 )
 app.Run() // blocks until SIGINT/SIGTERM, then runs OnStop hooks
 ```
 
 Boot stages: `fx.New` validates types (constructors do not run); `app.Start(ctx)` runs each `fx.Invoke` and fires OnStart hooks in topological order; main blocks on `app.Done()`; `app.Stop(ctx)` fires OnStop hooks in reverse order. Default timeout is **15 seconds** — override with `fx.StartTimeout` / `fx.StopTimeout`.
 
-## Provide and Invoke
-
-```go
-fx.New(
-    fx.Provide(NewLogger, NewDatabase, NewServer),  // lazy
-    fx.Invoke(RegisterRoutes, StartMetricsExporter), // always run during Start
-)
-```
-
-`fx.Provide` registers constructors; `fx.Invoke` is the trigger — without an Invoke (directly or transitively) referencing a type, its constructor never runs.
+- **`fx.Invoke` is the trigger** — a constructor runs only if an Invoke references its type directly or transitively, so an app with no Invoke builds nothing.
+- **`fx.Supply` for pre-built values** — wrapping a parsed config in `fx.Provide(func() *Config { return cfg })` adds a no-op constructor and hides that the value already exists.
+- **Validate the graph in CI** with `fx.New(...).Err()` — it reports missing providers and cycles without starting anything.
 
 ## Lifecycle Hooks
 
-Inject `fx.Lifecycle` and append hooks. Constructors should return quickly; long-running work belongs in `OnStart`.
+Inject `fx.Lifecycle` and append hooks rather than starting work in constructors or `init()` — Start/Stop ordering follows graph topology, which `init()` goroutines and constructor side effects ignore, leading to races and leaks.
 
 ```go
-func NewHTTPServer(lc fx.Lifecycle, log *zap.Logger, cfg *Config) *http.Server {
+func NewHTTPServer(lc fx.Lifecycle, cfg *Config) *http.Server {
     srv := &http.Server{Addr: cfg.Addr}
 
     lc.Append(fx.Hook{
         OnStart: func(ctx context.Context) error {
             ln, err := net.Listen("tcp", srv.Addr)
             if err != nil { return err }
-            go srv.Serve(ln)         // blocking work in a goroutine
+            go srv.Serve(ln) // blocking work in a goroutine
             return nil
         },
         OnStop: func(ctx context.Context) error {
@@ -109,39 +101,21 @@ func NewHTTPServer(lc fx.Lifecycle, log *zap.Logger, cfg *Config) *http.Server {
 }
 ```
 
-Both callbacks receive a context bounded by `StartTimeout`/`StopTimeout` — respect cancellation. **OnStart must return quickly** — spawn a goroutine for blocking work; otherwise startup hangs and dependent hooks never fire.
+- **OnStart must return quickly** — run blocking work (a server, a queue consumer) in a goroutine and signal it to stop and drain in OnStop; a blocking OnStart hangs the boot and dependent hooks never fire.
+- **Respect `ctx.Done()` in hooks** — the context is bounded by `StartTimeout`/`StopTimeout`; a hook that ignores it is reported as a timeout failure while its goroutine keeps running, leaking resources.
+- `fx.StartHook` / `fx.StopHook` / `fx.StartStopHook` adapt simpler signatures (no context, no error, or both): `lc.Append(fx.StartStopHook(srv.Start, srv.Stop))`.
 
-`fx.StartHook` / `fx.StopHook` / `fx.StartStopHook` adapt simpler signatures (no context, no error, or both):
+## Parameters, Results and Value Groups
 
-```go
-lc.Append(fx.StartStopHook(srv.Start, srv.Stop))   // matched pair
-```
-
-## Parameter and Result Objects
-
-fx re-exports dig's `dig.In` / `dig.Out` as `fx.In` / `fx.Out`. Use them when a constructor has 4+ dependencies, or when you need `name`/`group`/`optional` tags.
-
-```go
-type ServerParams struct {
-    fx.In
-
-    Logger *zap.Logger
-    DB     *sql.DB
-    Cache  *redis.Client     `optional:"true"`
-    Routes []http.Handler    `group:"routes"`
-}
-
-func NewServer(p ServerParams) *Server { /* ... */ }
-```
+`fx.In`/`fx.Out`, the `name`/`optional`/`group` tags, and value groups behave exactly as in dig — a consumer takes `[]http.Handler` tagged `group:"routes"` in an `fx.In` struct, and group order is unspecified. → See `samber/cc-skills-golang@golang-uber-dig` skill.
 
 ## fx.Annotate
 
-`fx.Annotate` wraps a constructor to add tags or interface bindings without a `fx.Out` struct. Prefer it for ergonomic name/group/As bindings:
+Prefer `fx.Annotate` over an `fx.Out` wrapper struct to add tags or interface bindings — the constructor stays untouched and reusable outside fx:
 
 ```go
 fx.Provide(
-    fx.Annotate(NewPrimaryDB, fx.ResultTags(`name:"primary"`)),
-    fx.Annotate(NewPostgresDB, fx.As(new(Database))),    // expose interface
+    fx.Annotate(NewPostgresDB, fx.As(new(Database)), fx.ResultTags(`name:"primary"`)),
     fx.Annotate(NewUserHandler,
         fx.As(new(http.Handler)),
         fx.ResultTags(`group:"routes"`),
@@ -149,27 +123,9 @@ fx.Provide(
 )
 ```
 
-## Value Groups
-
-Many constructors, one consumer slice — typical for routes, health checks, metrics collectors:
-
-```go
-type RouteResult struct {
-    fx.Out
-    Handler http.Handler `group:"routes"`
-}
-
-type ServerParams struct {
-    fx.In
-    Routes []http.Handler `group:"routes"`
-}
-```
-
-Append `,flatten` (`group:"routes,flatten"`) to unwrap a slice instead of nesting it. Order is **not guaranteed** — provide an explicit ordered slice when sequence matters.
-
 ## fx.Module
 
-`fx.Module` groups providers, invokes, and decorators under a name. Modules **scope decorators** to themselves and their children — a logger renamed in `fx.Module("db", ...)` only appears renamed for code inside that module.
+`fx.Module` groups providers, invokes, and decorators for one concern (HTTP, DB, metrics) — group by concern, not by layer, and keep `main()` to modules plus `Run()`. Modules **scope decorators** to themselves and their children: a logger renamed in `fx.Module("db", ...)` only appears renamed inside that module, whereas a top-level `fx.Decorate` applies to the whole app.
 
 ```go
 var DatabaseModule = fx.Module("database",
@@ -180,49 +136,18 @@ var DatabaseModule = fx.Module("database",
 )
 
 func main() {
-    fx.New(
-        fx.Provide(NewConfig, NewLogger),
-        DatabaseModule,
-        HTTPModule,
-    ).Run()
+    fx.New(fx.Provide(NewConfig, NewLogger), DatabaseModule, HTTPModule).Run()
 }
 ```
 
-Treat each module as a small library that can be lifted into another app — its public surface is the types it Provides.
-
-For `fx.Supply`/`fx.Replace`/`fx.Decorate`, optional deps, custom logging, manual lifecycle, and Quick Reference, see [advanced.md](./references/advanced.md).
-
-## Best Practices
-
-1. Keep `main()` thin — providers, modules, and a single `Run()`. Push real work into modules so each can be tested in isolation.
-2. Use lifecycle hooks instead of `init()` or goroutines launched from constructors — Start/Stop ordering depends on graph topology, but `init()` goroutines do not, which leads to races and leaks.
-3. OnStart must return promptly — long work goes in a goroutine inside the hook. A blocking OnStart hangs the rest of the boot.
-4. Respect `ctx.Done()` in hooks — a hook that ignores cancellation is reported as a timeout failure but its goroutine continues, leaking resources.
-5. Group by module, not by layer — a module owns the providers, lifecycle, and decorators for one concern (HTTP, DB, metrics).
-6. Use `fx.Annotate` for tags rather than wrapping a constructor in an `fx.Out` struct — keeps the constructor reusable outside fx.
-7. Replace `fx.Provide` with `fx.Supply` for pre-built values (config, command-line flags). Shorter, signals intent.
-8. Validate the graph in CI by booting under `fx.New(...).Err()` — catches missing providers and cycles before deploy.
-
-## Common Mistakes
-
-| Mistake | Fix |
-| --- | --- |
-| Long-running work directly in OnStart | Spawn a goroutine inside OnStart; the hook itself must return quickly so dependent hooks can run. |
-| `fx.Provide` something that should be `fx.Supply` | Pre-built values (config, secrets) belong in `fx.Supply` — clearer and avoids a no-op constructor. |
-| Module decorator leaking to siblings | Decorate inside `fx.Module(...)` — decorators flow only to descendants. A top-level `fx.Decorate` is global. |
-| Group order assumed | Groups are unordered. If order matters, provide an ordered slice from one constructor. |
-| Constructors with side effects | Side effects belong in OnStart — constructors should be cheap and pure-ish, since they may run concurrently and lazily. |
-| Forgotten `fx.Invoke` | Without an Invoke (or downstream consumer), constructors never run. Add at least one Invoke per app. |
-
 ## Testing
 
-Use `go.uber.org/fx/fxtest` to integrate fx with `*testing.T` (failures call `t.Fatal`, `RequireStop` registers as `t.Cleanup`). `fx.Populate(&target)` pulls values out of the graph; `fx.Replace` swaps real dependencies for fakes. Full patterns in [testing.md](./references/testing.md).
+Use `go.uber.org/fx/fxtest` to integrate fx with `*testing.T` (failures call `t.Fatal`, `RequireStop` registers as `t.Cleanup`). `fx.Populate(&target)` pulls values out of the graph; `fx.Replace` swaps real dependencies for fakes without editing the module. Read [references/testing.md](references/testing.md) when writing an fx test.
 
 ## Further Reading
 
-- [advanced.md](./references/advanced.md) — Supply/Replace/Decorate, optional deps, custom event logging, manual lifecycle, full Quick Reference
-- [recipes.md](./references/recipes.md) — full HTTP service with database/metrics, background workers with graceful drain, multiple impls of the same interface, manual lifecycle for CLI embedding
-- [testing.md](./references/testing.md) — fxtest patterns, `fx.Replace`, `fx.Populate`, isolated lifecycle tests, CI graph validation
+- [references/advanced.md](references/advanced.md) — read for `fx.Supply`/`fx.Replace`/`fx.Decorate` details, optional deps, routing fx events to your logger (`fx.WithLogger`), manual `Start`/`Stop` instead of `Run()`, and the Quick Reference
+- [references/recipes.md](references/recipes.md) — read for a full HTTP service with database and metrics, a background worker with graceful drain, multiple implementations of one interface, or embedding fx in a CLI sub-command
 
 ## Cross-References
 
@@ -230,7 +155,6 @@ Use `go.uber.org/fx/fxtest` to integrate fx with `*testing.T` (failures call `t.
 - → See `samber/cc-skills-golang@golang-dependency-injection` skill for DI concepts and library comparison
 - → See `samber/cc-skills-golang@golang-samber-do` skill for a generics-based alternative without reflection
 - → See `samber/cc-skills-golang@golang-google-wire` skill for compile-time DI (no runtime container)
-- → See `samber/cc-skills-golang@golang-structs-interfaces` skill for interface design patterns
 - → See `samber/cc-skills-golang@golang-context` skill for context propagation in OnStart/OnStop hooks
 - → See `samber/cc-skills-golang@golang-testing` skill for general testing patterns
 

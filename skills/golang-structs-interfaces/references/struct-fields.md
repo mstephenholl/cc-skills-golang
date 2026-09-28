@@ -2,7 +2,7 @@
 
 ## Struct Field Tags
 
-Field tags drive every reflection-based encoder and decoder. Exported fields in serialized structs MUST have field tags — without one, the encoder falls back to the Go field name, so renaming a field silently changes the wire format:
+Field tags drive every reflection-based encoder and decoder:
 
 ```go
 type Order struct {
@@ -39,7 +39,7 @@ Notes that bite in production:
 
 ## Preventing Struct Copies with `noCopy`
 
-Some structs must never be copied after first use (e.g., those containing a mutex, a channel, or internal pointers) — copying duplicates the lock state, so two goroutines end up guarding two different mutexes and the invariant silently disappears. Embed a `noCopy` sentinel to make `go vet` catch accidental copies:
+Embed a `noCopy` sentinel in structs that must not be copied after first use, so `go vet` catches accidental copies:
 
 ```go
 // noCopy may be added to structs which must not be copied after first use.

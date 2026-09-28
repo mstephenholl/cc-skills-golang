@@ -13,6 +13,8 @@
   - [Explain Injector](#explain-injector)
 - [Migration from Manual DI](#migration-from-manual-di)
 - [Quick Reference](#quick-reference)
+  - [Registration](#registration)
+  - [Invocation](#invocation)
   - [Aliasing](#aliasing)
   - [Lifecycle & Health](#lifecycle--health)
   - [Container Management](#container-management)
@@ -20,7 +22,7 @@
 
 ## Scopes (Module Tree)
 
-Scopes SHOULD be used to organize services by module:
+Use scopes to organize services by module — child scopes resolve from their ancestors, while siblings stay isolated:
 
 ```go
 root := do.New()
@@ -185,6 +187,31 @@ func main() {
 ```
 
 ## Quick Reference
+
+### Registration
+
+| Function | Purpose |
+| --- | --- |
+| `do.Provide[T]()` | Register lazy service (default) |
+| `do.ProvideNamed[T]()` | Register named lazy service |
+| `do.ProvideValue[T]()` | Register pre-built value (eager) |
+| `do.ProvideNamedValue[T]()` | Register named value |
+| `do.ProvideTransient[T]()` | Register new instance each time |
+| `do.ProvideNamedTransient[T]()` | Register named transient service |
+| `do.Package()` | Group registrations (`do.Lazy`, `do.Eager`, `do.Transient`, `do.Bind`) |
+
+### Invocation
+
+| Function                   | Purpose                                   |
+| -------------------------- | ----------------------------------------- |
+| `do.Invoke[T]()`           | Get service (with error)                  |
+| `do.InvokeNamed[T]()`      | Get named service                         |
+| `do.InvokeAs[T]()`         | Get first service matching interface      |
+| `do.InvokeStruct[T]()`     | Inject into struct fields using tags      |
+| `do.MustInvoke[T]()`       | Get service (panic on error)              |
+| `do.MustInvokeNamed[T]()`  | Get named service (panic on error)        |
+| `do.MustInvokeAs[T]()`     | Get service by interface (panic on error) |
+| `do.MustInvokeStruct[T]()` | Inject into struct (panic on error)       |
 
 ### Aliasing
 

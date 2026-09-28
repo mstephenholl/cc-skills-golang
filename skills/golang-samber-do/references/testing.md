@@ -6,12 +6,13 @@ Clone containers for isolated tests:
 
 ```go
 func TestUserService(t *testing.T) {
-    // Create test container by cloning main container
-    testInjector := mainInjector.Clone()
+    // Clone the container built by the same wiring as main() — the original stays untouched
+    testInjector := newAppInjector().Clone()
 
-    // Override with mocks
+    // Override with mocks — name the interface explicitly: without [Database], T is inferred
+    // as *MockDatabase and registers a new service instead of replacing Database
     mockDB := &MockDatabase{}
-    do.OverrideValue(testInjector, mockDB)
+    do.OverrideValue[Database](testInjector, mockDB)
 
     // Test with mocked dependencies
     service := do.MustInvoke[UserService](testInjector)

@@ -1,7 +1,5 @@
 # Manual Constructor Injection
 
-Manual DI is the simplest approach — pass dependencies through constructors. No library, no magic.
-
 ## Complete Application Example
 
 ```go
@@ -46,19 +44,4 @@ func main() {
 }
 ```
 
-## When Manual DI Works Well
-
-- Small to medium projects (< 15 services)
-- Simple dependency graph with clear layering
-- No need for lazy loading or lifecycle management
-- Team prefers explicit, visible wiring
-
-## When Manual DI Breaks Down
-
-- Adding a new service means editing `main()` and getting the wiring order right
-- Lifecycle management (health checks, graceful shutdown) must be hand-coded with `defer`
-- No lazy initialization — all services are created at startup, even if unused
-- Cross-cutting concerns (logging, tracing) must be threaded through every constructor
-- With 30+ services, the wiring code becomes fragile and hard to maintain
-
-Manual DI SHOULD be the default for small projects (< 15 services). Dependencies MUST be initialized in order — infrastructure first, then repositories, then services, then transport.
+Initialize in this order — infrastructure first, then repositories, then services, then transport — so each constructor receives dependencies that already exist; `defer` each `Close` right after its constructor so shutdown runs in reverse order.

@@ -70,7 +70,7 @@ func NewResource() *Resource {
 
 ## Resource Pools
 
-Resource pools SHOULD use channels with a fixed capacity for bounded allocation. Use channel-based pools or `sync.Pool` to manage limited resources between consumers. Always set a maximum size:
+Pool limited resources (connections, handles) with a buffered channel whose capacity is the maximum size. `sync.Pool` is not a substitute — it has no size bound and the GC may drop pooled items at any time, so it only suits reusing throwaway allocations:
 
 ```go
 type ConnPool struct {
