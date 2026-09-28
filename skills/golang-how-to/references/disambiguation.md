@@ -255,15 +255,25 @@ These four skills all touch "third-party packages", but each owns a different st
 - "Upgrade github.com/foo/bar to the latest version" → `golang-dependency-management`.
 - "Scan my whole module for reachable CVEs" → `golang-security` (`govulncheck`).
 
-> Note: this skill cross-references the other three in its body (and they reference it back). Prefer `golang-pkg-go-dev` over Context7 for any Go package fact-lookup.
+**Sub-boundary — `godig` vs gopls vs Context7 vs govulncheck.** Four tools can answer "is this dependency OK to use", and they overlap less than they look:
 
-**Sub-boundary — `godig` vs `gopls`:** both touch third-party code, but `godig` queries the remote pkg.go.dev index (works for packages not yet added to the project, no local build needed) while `gopls` (→ `samber/cc-skills-golang@golang-gopls`, via its MCP server, the native `LSP` tool, or its CLI) reasons about your actual resolved build in `go.sum` (including `replace`d forks).
+- **`godig`** (→ `samber/cc-skills-golang@golang-pkg-go-dev`) answers questions about the **published ecosystem** — any package on pkg.go.dev, whether or not it's in your `go.mod`, with structured versions, signatures, examples, importers, and licenses. Its `vulns` lists CVEs known for a package/version in isolation, regardless of whether your build reaches the vulnerable code.
+- **gopls** (→ `samber/cc-skills-golang@golang-gopls`) answers questions about **your specific build**: your code plus every dependency exactly as pinned in `go.sum`, including `replace`d forks and local paths, which neither `godig` nor Context7 can see. Its `go_vulncheck` is a single-shot reachability check for use mid-edit.
+- **`govulncheck`** (→ `samber/cc-skills-golang@golang-security`) is the whole-tree audit: it walks the module's call graph to confirm which known vulnerabilities are reachable, and is the tool of record for CI gates and periodic sweeps.
+- **Context7** is a cross-language docs fetcher. For a Go module, `godig`'s structured pkg.go.dev data beats Context7's scraped docs, which can lag or miss lesser-known modules — use Context7 only for non-Go libraries or a Go module pkg.go.dev doesn't index.
 
-- "Where is `Foo` defined in my repo?" or "find every call site of this dependency's function in my code" → `golang-gopls` (`go_search`/`go_symbol_references`), not `golang-pkg-go-dev` — godig has no visibility into local, unpublished code or call sites inside your own repo.
-- "Does this package I haven't added yet have known CVEs?" → `golang-pkg-go-dev` (`vulns`).
-- "Can my current build actually reach a vulnerability in a dependency I already use?" → `golang-gopls` (`go_vulncheck`) or `golang-security` (`govulncheck` whole-tree).
-
-See the `samber/cc-skills-golang@golang-gopls` skill for the full gopls reference, and the `samber/cc-skills-golang@golang-how-to` skill's "`godig` vs gopls vs Context7 vs govulncheck" section for the full breakdown.
+| Task | Tool |
+| --- | --- |
+| Find where a symbol is defined, or every call site of a dependency's symbol, in your repo | gopls — `go_search`, `go_symbol_references` (`godig imported-by` lists public _packages_, not call sites in your repo) |
+| Read a dependency's exact resolved source, including a `replace`d fork | gopls — `go_package_api`, go-to-definition |
+| Get compiler diagnostics right after an edit | gopls — `go_diagnostics` |
+| Rename, extract, inline, or otherwise refactor local code | gopls — safe rename, `refactor.*` code actions |
+| Check whether your current build reaches a known vulnerability, mid-edit | gopls — `go_vulncheck` |
+| Whole-tree vulnerability audit across the module (CI, periodic sweep) | `govulncheck ./...` |
+| List versions, check CVEs, or read the license of a package you haven't added yet | `godig versions` / `vulns` / `package licenses` |
+| Exported symbols, runnable examples, or README of a published package | `godig symbols` / `symbol doc` / `symbol examples` / `module readme` |
+| See who imports a package across the public ecosystem, or search for a candidate | `godig imported-by` / `search` |
+| Docs for a non-Go library, or a Go module not indexed on pkg.go.dev | Context7 |
 
 ---
 

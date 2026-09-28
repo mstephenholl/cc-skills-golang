@@ -1,6 +1,6 @@
 # Capability → CLI → MCP → native LSP
 
-Every gopls capability, mapped to its CLI command, MCP tool, and native `LSP` tool operation where one exists. `—` means that surface has no path to this capability.
+Every gopls capability, mapped to its CLI command, MCP tool, and Claude Code's native `LSP` tool operation where one exists. `—` means that surface has no path to this capability.
 
 | Capability | CLI | MCP tool | Native LSP op |
 | --- | --- | --- | --- |

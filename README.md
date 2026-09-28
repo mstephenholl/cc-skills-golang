@@ -202,10 +202,10 @@ These skills are designed as **atomic, cross-referencing units**. A skill may re
 | ⭐️ | ✅ `golang-design-patterns` | ⚡ ⚙️ | -37% | 118 | 1,842 | 9,302 |
 | ⭐️ | ✅ `golang-documentation` | ⚡ 🤖 ⚙️ | -53% | 76 | 1,544 | 10,335 |
 | ⭐️ | ✅ `golang-error-handling` | ⚡ 🤖 ⚙️ | -26% | 116 | 1,414 | 4,829 |
-| ⭐️ | ✅ `golang-how-to` | ⚡ | — | 104 | 4,307 | 18,030 |
-| ⭐️ | ✅ `golang-modernize` | ⚡ 🤖 | -43% | 104 | 3,486 | 15,145 |
+| ⭐️ | ✅ `golang-how-to` | ⚡ | — | 104 | 2,650 | 16,666 |
+| ⭐️ | ✅ `golang-modernize` | ⚡ 🤖 | -43% | 104 | 2,763 | 14,806 |
 | ⭐️ | ✅ `golang-naming` | ⚡ ⚙️ | -23% | 86 | 1,992 | 6,656 |
-| ⭐️ | ✅ `golang-refactoring` | ⚡ 🧠 🤖 ⚙️ | — | 133 | 3,722 | 21,280 |
+| ⭐️ | ✅ `golang-refactoring` | ⚡ 🧠 ⚙️ | — | 133 | 3,011 | 20,336 |
 | ⭐️ | ✅ `golang-safety` | ⚡ | -58% | 120 | 1,969 | 5,186 |
 | ⭐️ | ✅ `golang-testing` | ⚡ 🧠 🤖 ⚙️ | -32% | 98 | 2,460 | 8,708 |
 | ⭐️ | ✅ `golang-troubleshooting` | ⚡ 🧠 🤖 | -32% | 103 | 2,414 | 17,456 |
@@ -218,14 +218,14 @@ These skills are designed as **atomic, cross-referencing units**. A skill may re
 |  | ✅ `golang-dependency-injection` | ⚡ ⚙️ | -47% | 133 | 1,861 | 2,201 |
 |  | ✅ `golang-dependency-management` | ⚡ | -54% | 125 | 1,646 | 4,735 |
 |  | ✅ `golang-structs-interfaces` | ⚡ ⚙️ | -35% | 91 | 1,708 | 3,060 |
-|  | ✅ `golang-lint` | ⚡ 🤖 | -41% | 95 | 1,874 | 6,327 |
+|  | ✅ `golang-lint` | ⚡ 🤖 | -41% | 95 | 1,633 | 6,086 |
 |  | ✅ `golang-observability` | ⚡ 🤖 ⚙️ | -37% | 105 | 2,257 | 18,749 |
 |  | ✅ `golang-performance` | ⚡ 🧠 🤖 | -39% | 107 | 1,991 | 19,585 |
-|  | ✅ `golang-gopls` | ⚡ | — | 116 | 2,259 | 12,254 |
-|  | ✅ `golang-pkg-go-dev` | ⚡ | — | 146 | 3,418 | 5,362 |
-|  | ✅ `golang-popular-libraries` | ⚡ | -30% | 110 | 1,135 | 5,047 |
-|  | ✅ `golang-project-layout` | ⚡ | -38% | 84 | 1,749 | 6,245 |
-|  | ✅ `golang-stay-updated` | ⚡ | -56% | 106 | 1,864 | 1,864 |
+|  | ✅ `golang-gopls` | ⚡ | — | 116 | 1,544 | 11,643 |
+|  | ✅ `golang-pkg-go-dev` | ⚡ | — | 146 | 2,450 | 5,204 |
+|  | ✅ `golang-popular-libraries` | ⚡ | -30% | 110 | 922 | 4,834 |
+|  | ✅ `golang-project-layout` | ⚡ | -38% | 84 | 1,610 | 6,116 |
+|  | ✅ `golang-stay-updated` | ⚡ | -56% | 106 | 1,862 | 1,862 |
 
 **Tools:**
 

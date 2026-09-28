@@ -6,7 +6,7 @@ license: MIT
 compatibility: Designed for Claude Code, Codex or similar harness. Requires the godig CLI (go install github.com/samber/godig/cmd/godig@latest) or access to a godig MCP server, and internet access to reach the pkg.go.dev API.
 metadata:
   author: samber
-  version: "1.4.3"
+  version: "1.4.4"
   openclaw:
     emoji: "🔎"
     homepage: https://github.com/samber/cc-skills-golang
@@ -24,58 +24,11 @@ allowed-tools: Read Edit Write Glob Grep Bash(go:*) Bash(golangci-lint:*) Bash(g
 
 # golang-pkg-go-dev
 
-**Dependencies:** `godig` — `go install github.com/samber/godig/cmd/godig@latest` (or use a registered godig MCP server / the hosted instance instead).
+**Dependencies:** `godig` — `go install github.com/samber/godig/cmd/godig@latest`, or a registered godig MCP server. When neither is available, read [setup.md](references/setup.md) for install and MCP registration (including a hosted instance).
 
-`godig` queries the [pkg.go.dev](https://pkg.go.dev) API. Use it to answer questions about Go packages and modules: docs, symbols, versions, importers and vulnerabilities. It works as a CLI and as an MCP server, and all operations are **read-only** and need no authentication.
+`godig` queries the [pkg.go.dev](https://pkg.go.dev) API for docs, symbols, versions, importers, licenses, and vulnerabilities of any published Go package — including ones not yet in your `go.mod`. It works as a CLI and as an MCP server with the same operations under matching names; every operation is **read-only** and needs no authentication.
 
-## When to use this skill
-
-Trigger on questions like:
-
-- "What versions of github.com/samber/lo are available?"
-- "Does golang.org/x/text have known vulnerabilities?"
-- "Show me the docs / symbols for package X."
-- "Which packages import X?"
-- "Search Go packages for Y."
-
-## Choosing between `godig`, gopls, Context7, and govulncheck
-
-In short: `godig` answers questions about the **published ecosystem** (works even for packages not yet in your `go.mod`); `gopls` reasons about **your locally resolved build** (`go.sum`, including `replace`d forks); Context7 is a fallback for non-Go or unindexed docs; `govulncheck` is the whole-tree vulnerability audit (→ `samber/cc-skills-golang@golang-security`). See the `samber/cc-skills-golang@golang-gopls` skill for wiring `gopls` (MCP server, native `LSP` tool, and CLI) with Claude Code, and the `samber/cc-skills-golang@golang-how-to` skill's "`godig` vs gopls vs Context7 vs govulncheck" section for the full task-to-tool matrix.
-
-## Setup
-
-### Install
-
-```bash
-go install github.com/samber/godig/cmd/godig@latest
-```
-
-### Register the MCP server (optional)
-
-`godig mcp` runs over **stdio** by default, or **streamable HTTP** with `--transport http`. The command is harness-agnostic — any MCP-capable host can point at it. Claude Code registers it via its own CLI:
-
-stdio (the client launches godig on demand):
-
-```bash
-claude mcp add pkg-go-dev -- godig mcp
-```
-
-streamable HTTP (shared server at `/mcp`, default `:8080`):
-
-```bash
-godig mcp --transport http --addr :8080
-claude mcp add --transport http pkg-go-dev http://localhost:8080/mcp
-```
-
-Hosted instance (no install needed) — a public server runs at `https://godig.samber.dev/mcp`:
-
-```bash
-claude mcp add --transport http pkg-go-dev https://godig.samber.dev/mcp
-```
-
-Other MCP-capable harnesses (Cursor, Windsurf, and others) each have their own MCP server registration — an entry in their respective settings file pointing at the same `godig mcp` command or hosted URL, not a shared config format.
-
-The CLI and the MCP server expose the **same** operations under matching names. Prefer the CLI when `godig` is installed; the hosted instance is a fallback when it is not.
+For code in your locally resolved build (`go.sum`, `replace`d forks, call sites in your repo) → See `samber/cc-skills-golang@golang-gopls` skill. For when to use `godig` over Context7 or `govulncheck` → See `samber/cc-skills-golang@golang-how-to` skill (Package lookup cluster).
 
 ## Commands
 
@@ -105,11 +58,9 @@ The CLI and the MCP server expose the **same** operations under matching names. 
 | `mcp` | — | `--transport stdio\|http --addr --cache-ttl --cache-size` | Run as an MCP server |
 | `version` | — | — | Print godig version / commit / build date |
 
-When `godig` runs as an MCP server, each data command above is exposed as an operation of the same name.
-
 **Exit codes:** `0` success, `1` runtime error (network, package not found), `2` usage error — a missing/invalid argument or flag (e.g. a non-positive `--limit`), or a command group invoked with no subcommand (`godig package`). Check for `2` to tell a malformed call apart from a failed lookup.
 
-Full `-o md` output for every command: [sample-output.md](references/sample-output.md).
+Read [sample-output.md](references/sample-output.md) when you need the shape of a command's `-o md` output before parsing it.
 
 ### Tips
 
@@ -120,7 +71,7 @@ Full `-o md` output for every command: [sample-output.md](references/sample-outp
 - `--filter` narrows list results server-side with a Go boolean expression — see [Filter syntax](#filter-syntax).
 - `--goos`/`--goarch` set the documentation/symbols build context (e.g. `linux`/`amd64`).
 - Prefer `symbol doc`/`symbol examples` over the package-wide `package doc`/`package examples` when you only need one symbol — far fewer tokens.
-- **Parallelize independent lookups** — every command is a self-contained, read-only HTTP query, so calls never depend on each other. When a task needs docs, examples, versions, or vulns for **several** symbols, packages, or modules, issue all the calls at once (multiple `godig` invocations in a single turn) rather than one after another — wall-clock drops from sum-of-latencies to slowest-single-call. For a large fan-out (documenting many symbols, comparing many candidate libraries, auditing CVEs across a dependency set), dispatch up to 5 parallel sub-agents, each running its own `godig` calls and returning a compact summary, so the raw LARGE output never lands in the main context.
+- **Parallelize independent lookups** — every command is a self-contained, read-only HTTP query, so issue the calls for several symbols, packages, or modules in one turn rather than one after another. For a large fan-out (documenting many symbols, comparing many candidate libraries, auditing CVEs across a dependency set), hand the calls to parallel sub-agents that each return a compact summary, so the raw LARGE output never lands in the main context.
 - Listing commands auto-paginate (return all results); use `--limit` to cap.
 
 ### Filter syntax
@@ -149,49 +100,6 @@ godig symbols github.com/samber/lo --filter 'kind=="Function" && hasPrefix(name,
 godig versions github.com/samber/lo --filter 'hasPrefix(version,"v1.5")' -o md
 godig versions github.com/samber/lo --filter 'deprecated==false && retracted==false' -o md
 godig search "result option" --filter 'hasPrefix(packagePath,"github.com/samber/")' -o md
-```
-
-### Examples
-
-Always request Markdown output (`-o md`):
-
-```bash
-# Overview — start here (compact, one call)
-godig overview github.com/samber/ro -o md
-
-# Search
-godig search "result option monad" --limit 5 -o md
-
-# Package facets
-godig package info github.com/samber/ro -o md
-godig package imports github.com/samber/ro -o md
-godig package doc github.com/samber/ro --format md -o md
-godig package examples github.com/samber/ro --symbol Map -o md
-godig package licenses github.com/samber/ro -o md
-
-# Single symbol (token-efficient vs package-wide doc/examples)
-godig symbol doc github.com/samber/lo Map -o md
-godig symbol examples github.com/samber/oops OopsError.Error -o md
-
-# Module facets
-godig module info github.com/samber/ro -o md
-godig module readme github.com/samber/ro -o raw
-godig dependencies github.com/samber/ro -o md
-
-# Lists (auto-paginated; --limit to cap)
-godig versions github.com/samber/ro -o md
-godig major-versions github.com/samber/lo -o md
-godig packages github.com/samber/ro -o md
-godig imported-by github.com/samber/ro --limit 20 -o md
-godig symbols github.com/samber/ro --filter 'kind=="Function"' -o md
-
-# Pin a version / set the build context
-godig versions github.com/samber/ro --filter 'hasPrefix(version,"v0.3")' -o md
-godig package doc github.com/samber/lo --version v1.50.0 -o md
-godig symbols github.com/samber/ro --goos linux --goarch amd64 -o md
-
-# Vulnerabilities
-godig vulns github.com/samber/ro -o md
 ```
 
 ---

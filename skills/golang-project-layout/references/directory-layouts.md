@@ -21,10 +21,10 @@ project/
 │   │   └── main.go
 │   ├── client/            # Main application #2
 │   │   └── main.go
-│   └── migrate/           # Main application #3
-│       └── main.go
-│   └── cli/               # Main application #4
-│       └── main.go
+│   ├── migrate/           # Main application #3
+│   │   └── main.go
+│   ├── cli/               # Main application #4
+│   │   └── main.go
 │   └── worker/            # Main application #5
 │       └── main.go
 ├── internal/              # Private application code (`internal/` MUST be used for non-exported packages)
@@ -157,7 +157,7 @@ myproject/
 │   └── myapp/
 │       └── main.go   # Main in cmd/
 ├── internal/
-│   ├── util/         # Specific utility names
-│   └── format/       # Or domain-specific names
+│   ├── stringconv/   # Domain-specific names, not utils/
+│   └── format/       # ...nor helpers/ or common/
 └── pkg/              # Only if useful to others
 ```

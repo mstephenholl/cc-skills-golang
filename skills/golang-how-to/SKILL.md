@@ -6,7 +6,7 @@ license: MIT
 compatibility: Designed for Claude Code, Codex or similar harness. Requires git.
 metadata:
   author: samber
-  version: "1.5.0"
+  version: "1.5.1"
   openclaw:
     emoji: "🧭"
     homepage: https://github.com/samber/cc-skills-golang
@@ -66,62 +66,11 @@ Load the **primary skill** first. Add a skill from the **Add when** column only 
 | Compose slog handlers with `samber/slog-*` | `golang-samber-slog` | `golang-observability` (overall logging strategy) |
 | Use dependency injection | `golang-dependency-injection` | the chosen library's skill: `golang-google-wire`, `golang-uber-dig`, `golang-uber-fx`, or `golang-samber-do` |
 
-All skill identifiers above are short forms of `samber/cc-skills-golang@<name>`.
+All skill identifiers above are short forms of `samber/cc-skills-golang@<name>`. For a skill missing from this table, or to browse every skill by category, read [by-category.md](references/by-category.md).
 
-## Code navigation with gopls
+## Code navigation and package lookup
 
-`gopls` gives semantic code intelligence for Go — go-to-definition, find references, diagnostics, package API, symbol search, refactoring. → See `samber/cc-skills-golang@golang-gopls` skill for the three ways to reach it (its own MCP server, the native `LSP` tool, and its CLI), the full capability matrix, and efficient read/edit workflows.
-
-`gopls` only reasons about code that is present and resolvable in the local build: your workspace plus every dependency exactly as pinned in `go.sum` (including `replace` directives). For any fact that isn't tied to your local build — version history, licenses, ecosystem-wide importers, a package you haven't added yet — use `golang-pkg-go-dev` (`godig`). See the `godig` vs gopls vs Context7 vs govulncheck section below for the full boundary.
-
-## `godig` vs gopls vs Context7 vs govulncheck
-
-Four tools can answer "is this dependency OK to use," and they don't overlap as much as they look:
-
-- **Context7** is a general-purpose, cross-language documentation fetcher — useful when no more specific source exists. For a Go package or module, `godig` is almost always the better choice: it pulls **structured, Go-specific data** straight from pkg.go.dev — exact versions, exported symbols with signatures, runnable examples, `imported-by`, and known vulnerabilities — rather than Context7's generic scraped/curated docs, which don't expose that structure and can lag or miss lesser-known Go modules. Reach for Context7 only when a dependency's documentation genuinely doesn't exist or isn't indexed on pkg.go.dev.
-- **`godig`** answers questions about the **published ecosystem**: any Go package or module, whether or not it's in your `go.mod` yet — it calls the remote pkg.go.dev API and never touches your local checkout. Its `vulns` command reports CVEs known for a package/version in isolation, regardless of whether your build actually reaches the vulnerable code path.
-- **`gopls`** (→ `samber/cc-skills-golang@golang-gopls`, via its MCP server, the native `LSP` tool, or its CLI) answers questions about **your specific build**: your code plus every dependency exactly as pinned in `go.sum`, including `replace` directives pointing at forks or local paths — neither `godig` nor Context7 can see that. Its `go_vulncheck` operation runs a single, on-demand reachability check against the workspace as it stands right now.
-- **`govulncheck`** (the standalone CLI, wrapped by the `samber/cc-skills-golang@golang-security` skill) is the whole-tree audit: it walks the entire module's call graph to confirm which known vulnerabilities are actually reachable, and is the tool of record for CI gates and periodic security sweeps — `gopls`'s `go_vulncheck` is a lighter-weight, single-shot version of the same analysis for use mid-edit.
-
-Pick by task:
-
-| Task | Tool | How |
-| --- | --- | --- |
-| Find where a symbol is defined in your own repo | `gopls` | `samber/cc-skills-golang@golang-gopls` — `go_search`, then `go_file_context` |
-| Understand a file's intra-package dependencies | `gopls` | `samber/cc-skills-golang@golang-gopls` — `go_file_context` |
-| Jump into a dependency's exact resolved source (incl. forks/`replace`d versions) | `gopls` | `samber/cc-skills-golang@golang-gopls` — `go_package_api`, or the native `LSP` tool's `goToDefinition` |
-| Find every call site in your own code that references a dependency's symbol | `gopls` | `samber/cc-skills-golang@golang-gopls` — `go_symbol_references` — `godig`'s `imported-by` only lists public _packages_, not call sites in your repo |
-| Get compiler diagnostics right after an edit | `gopls` | `samber/cc-skills-golang@golang-gopls` — `go_diagnostics` (MCP), or automatic with the native `LSP` tool |
-| Check whether your current build can reach a known vulnerability, mid-edit | `gopls` | `samber/cc-skills-golang@golang-gopls` — `go_vulncheck` |
-| Rename, extract, inline, or otherwise refactor local code | `gopls` | `samber/cc-skills-golang@golang-gopls` — safe rename, `refactor.*` code actions |
-| Whole-tree vulnerability audit across the module (CI, periodic sweep) | `govulncheck` | `samber/cc-skills-golang@golang-security` skill — `govulncheck ./...` |
-| List available versions of a published package | `godig` | `godig versions <path>` |
-| Check known CVEs for a package/version you haven't added yet | `godig` | `godig vulns <path>` |
-| See exported symbols/signatures of a published package | `godig` | `godig symbols` / `symbol doc` |
-| Get runnable code examples for a symbol | `godig` | `godig symbol examples` |
-| Read a package's rendered README/docs | `godig` | `godig module readme` / `package doc` |
-| See who imports a package across the whole public ecosystem | `godig` | `godig imported-by` |
-| Search for a package or library candidate | `godig` | `godig search` |
-| Check a package's or module's license | `godig` | `godig package licenses` / `module licenses` |
-| Get docs for a non-Go library, or a Go module not indexed on pkg.go.dev | Context7 | library docs lookup (resolve the library, then query its docs) |
-
-See the `samber/cc-skills-golang@golang-pkg-go-dev` skill for the full `godig` command reference, and the `samber/cc-skills-golang@golang-security` skill for the whole-tree `govulncheck` remediation workflow.
-
-## Categories at a glance
-
-Full catalog with "use when" hooks: [by-category.md](references/by-category.md)
-
-| Category | Skills |
-| --- | --- |
-| Code Quality | `golang-code-style` `golang-documentation` `golang-error-handling` `golang-lint` `golang-naming` `golang-safety` `golang-security` `golang-structs-interfaces` |
-| Architecture & Design | `golang-concurrency` `golang-context` `golang-data-structures` `golang-database` `golang-dependency-injection` `golang-design-patterns` `golang-modernize` `golang-refactoring` |
-| QA & Performance | `golang-benchmark` `golang-observability` `golang-performance` `golang-testing` `golang-troubleshooting` |
-| Project Setup | `golang-cli` `golang-continuous-integration` `golang-dependency-management` `golang-gopls` `golang-pkg-go-dev` `golang-popular-libraries` `golang-project-layout` `golang-stay-updated` |
-| APIs | `golang-graphql` `golang-grpc` `golang-swagger` |
-| Dependency Injection | `golang-dependency-injection` `golang-google-wire` `golang-uber-dig` `golang-uber-fx` `golang-samber-do` |
-| Frameworks | `golang-spf13-cobra` `golang-spf13-viper` |
-| samber/\* | `golang-samber-do` `golang-samber-hot` `golang-samber-lo` `golang-samber-mo` `golang-samber-oops` `golang-samber-ro` `golang-samber-slog` |
-| Testing | `golang-stretchr-testify` `golang-testing` |
+For code in your local build — definitions, references, diagnostics, safe rename — → See `samber/cc-skills-golang@golang-gopls` skill. When a dependency question could go to `godig`, gopls, Context7, or `govulncheck`, read the "Package lookup" section of [disambiguation.md](references/disambiguation.md#12-package-lookup--discovery-cluster).
 
 ## Competing clusters — boundary lines
 

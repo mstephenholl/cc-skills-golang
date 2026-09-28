@@ -71,6 +71,7 @@
   - [`go mod tidy` merges duplicate require blocks _(Go 1.27+)_](#go-mod-tidy-merges-duplicate-require-blocks-go-127)
   - [Small Go 1.27+ API preferences](#small-go-127-api-preferences)
   - [Go 1.27+ version-bump risk checklist (verify, don't rewrite)](#go-127-version-bump-risk-checklist-verify-dont-rewrite)
+- [Baseline and tooling priorities](#baseline-and-tooling-priorities)
 - [General Modernization (Any Version)](#general-modernization-any-version)
   - [Code MUST use `any` instead of `interface{}` _(Go 1.18+)_](#code-must-use-any-instead-of-interface-go-118)
   - [Use generics instead of `interface{}` + type assertions _(Go 1.18+)_](#use-generics-instead-of-interface--type-assertions-go-118)
@@ -924,6 +925,33 @@ These changes need review before or during a bump to `go 1.27` — none of them 
 - **`linux/ppc64` now builds ELFv2 binaries** and requires Linux kernel 3.13+ (RHEL 7's 3.10 kernel with backports) — relevant only to ppc64 deployments.
 - **`bzr` version control support removed** from the `go` command — irrelevant unless a module still vendors from Bazaar.
 - **Tracebacks now include `runtime/pprof` goroutine labels** for `go 1.27+` modules by default; disable with `GODEBUG=tracebacklabels=0` if labels leak sensitive data into crash logs or panic output.
+
+---
+
+## Baseline and tooling priorities
+
+Modernizations older than Go 1.22, and CI tooling items, ranked in the same three tiers as SKILL.md's Migration Priority Guide. They are baseline Go practice by now but still commonly missed; most have a before/after in their version section above or under General Modernization below, and [tooling.md](./tooling.md) covers the tooling items.
+
+**High priority (safety and correctness)**
+
+- Use `errors.Is`/`errors.As` instead of direct comparison or type assertion _(Go 1.13+)_
+
+**Medium priority (readability and maintainability)**
+
+- Replace `interface{}` with `any` _(Go 1.18+)_
+- Use `min`/`max` builtins _(Go 1.21+)_
+- Use `slices` and `maps` packages _(Go 1.21+)_
+- Use `sync.OnceValue`/`sync.OnceFunc` _(Go 1.21+)_
+
+**Lower priority (gradual improvement)**
+
+- Migrate to `slog` from third-party loggers _(Go 1.21+)_
+- Replace `sort.Slice` with `slices.SortFunc` _(Go 1.21+)_
+- Enable PGO for production builds _(Go 1.21+)_
+- Upgrade to golangci-lint v2 with the modernize linter _(golangci-lint v2.6.0+)_
+- Add `govulncheck` to the CI pipeline
+- Set up a monthly modernization CI pipeline
+- Set up AI-driven code review in CI — it loads these skills to guide review per area; → See `samber/cc-skills-golang@golang-continuous-integration` skill
 
 ---
 

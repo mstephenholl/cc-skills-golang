@@ -1,6 +1,6 @@
 # gopls settings reference
 
-Source: [tip.golang.org/gopls/settings](https://tip.golang.org/gopls/settings); full canonical list: `gopls api-json`. Settings are passed via the LSP client's `initializationOptions` (editor-specific config file/UI) — there is no `gopls.json` read from the workspace by default. Record the chosen settings in the project's agent-config file (CLAUDE.md, AGENTS.md, or equivalent), so future sessions pick them up without rediscovering them.
+Source: [tip.golang.org/gopls/settings](https://tip.golang.org/gopls/settings); full canonical list: `gopls api-json`. Settings are passed via the LSP client's `initializationOptions` (editor-specific config file/UI) — there is no `gopls.json` read from the workspace by default. Offer to record the chosen settings in the project's agent-config file (CLAUDE.md, AGENTS.md, or equivalent) so future sessions don't rediscover them — write it only if the user accepts, since that file steers every later task.
 
 ## Table of contents
 

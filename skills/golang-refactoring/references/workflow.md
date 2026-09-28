@@ -5,19 +5,19 @@
 
 ## Table of Contents
 
-- [1. The Planning Gate (mandatory, before any edit)](#1-the-planning-gate-mandatory-before-any-edit)
+- [1. The Planning Gate (multi-step or High-risk refactors)](#1-the-planning-gate-multi-step-or-high-risk-refactors)
 - [2. Three Interacting Orderings](#2-three-interacting-orderings)
   - [Parallel vs. sequential — decision checklist](#parallel-vs-sequential--decision-checklist)
 - [3. The Git Model](#3-the-git-model)
 - [4. Parallel vs. Sequential Execution](#4-parallel-vs-sequential-execution)
 - [5. The `// REFACTOR(step N): ...` Marker Convention](#5-the--refactorstep-n--marker-convention)
-- [6. Workflows (`ultracode`) vs. Human-in-the-Loop](#6-workflows-ultracode-vs-human-in-the-loop)
+- [6. Never Chain Dependent Stages Without Review](#6-never-chain-dependent-stages-without-review)
 - [7. Human Checkpoints](#7-human-checkpoints)
 - [Cross-References](#cross-references)
 
-## 1. The Planning Gate (mandatory, before any edit)
+## 1. The Planning Gate (multi-step or High-risk refactors)
 
-**Thinking mode:** reason as thoroughly as possible here — on Claude Code, use `ultrathink` to trigger extended thinking explicitly. A wrong ordering call does not surface as an obviously wrong plan — it surfaces later as a broken build or a conflict-riddled merge, once several PRs are already in flight. Getting the sequencing right up front is cheaper than untangling it after the fact.
+A Low- or Medium-risk single step skips this gate and goes straight to the Core Loop in `SKILL.md`. Anything larger starts here.
 
 - Before touching a single line of code, map the blast radius with gopls:
   - find every reference to the symbols you intend to change
@@ -44,13 +44,13 @@ Once the blast radius is mapped, turn it into a **refactoring inventory** — on
   - a move is verified by gopls plus a green build/test run, while an optimization needs benchmarks (→ See `samber/cc-skills-golang@golang-benchmark` skill) and a closer read for subtle correctness changes
   - bundling them asks one reviewer to do both jobs at once and denies the move the fast review it earns on its own
   - they also touch the same file, so Ordering (b) below puts them in sequence regardless — never split a move-then-optimize pair across parallel worktrees
-- The inventory is not busywork — it is the object every later ordering decision is computed from, and it is what you show the human for sign-off.
+- The inventory is not busywork — it is the object every later ordering decision is computed from, and it is what you show the human.
 
-**This step ends with explicit user sign-off before any code is touched.** This is a hard gate, not a suggestion: present the inventory and the staged PR plan derived from it (see below), and wait for approval. A refactor that starts moving code before the human has seen the shape of the whole plan cannot be course-corrected cheaply — by the time a wrong assumption surfaces, several PRs may already be staged on top of it.
+**Present the inventory and the staged PR plan derived from it (see below).** When the plan contains a High-risk row or a move from `SKILL.md`'s sign-off list, get explicit sign-off before touching code — by the time a wrong assumption surfaces, several PRs may already be staged on top of it. Otherwise proceed; each PR still gets human review before it merges.
 
 ## 2. Three Interacting Orderings
 
-Once the inventory is approved, three independent ordering concerns combine to produce the final sequence. Each answers a different question, and a plan that gets one right while ignoring the others still fails.
+Once the inventory exists, three independent ordering concerns combine to produce the final sequence. Each answers a different question, and a plan that gets one right while ignoring the others still fails.
 
 | Ordering | Question it answers | Why it matters |
 | --- | --- | --- |
@@ -87,8 +87,8 @@ If any answer is yes, the two rows are sequential. Only when every answer is no 
 The shape:
 
 1. Create a long-lived `refactor/<topic>` branch off `main`, and seed it with `// REFACTOR(step N): ...` markers for the plan itself — see Step 5.
-2. For each atomic change in the inventory, in the order established in Step 2, **dispatch it to a sub-agent** rather than executing it directly in the orchestrating session. The sub-agent, scoped to a fresh worktree, does the work:
-   - Enter a fresh, isolated worktree.
+2. For each atomic change in the inventory, in the order established in Step 2, one change per PR (on a long refactor, delegating each row to a sub-agent in its own worktree keeps the orchestrating session's context for the rows still ahead):
+   - Work in a fresh, isolated worktree.
    - Create a branch for that one change, based on the current tip of `refactor/<topic>`.
    - Apply the single change — and nothing else. If the inventory row is turning out larger than **~100–500 lines**, that's a signal it's actually two rows: split it before it grows into a diff nobody can review in one sitting.
    - Verify: `go build ./... && go vet ./... && go test ./...` (add `-race` or `benchstat`-backed `-bench` per the Risk Stratification table in `SKILL.md`).
@@ -100,8 +100,7 @@ The shape:
      gh pr create --base refactor/<topic> --title "..." --body "..."
      ```
 
-   - The orchestrating session's own context is the scarcest resource across a long refactor — spending it on every intermediate edit, failed attempt, and tool-output while executing one row leaves less of it for tracking the other rows still ahead and for the ordering decisions in Step 2.
-   - Have the sub-agent report back a short result (pass/fail, verification output, PR link) and keep that in the orchestrating session's context — not the sub-agent's full working transcript.
+   - When a sub-agent ran the row, keep only its short result (pass/fail, verification output, PR link) in the orchestrating session — not its full working transcript.
 3. A human reviews and merges each of these small PRs into `refactor/<topic>` at their own pace.
    - Structural PRs should move fast; behavioral PRs get full scrutiny (see Beck ordering above).
    - For any PR that changes code logic rather than just its shape, load `samber/cc-skills-golang@golang-security` (and `golang-safety` for internal-correctness risk) alongside this skill before approving it, since a logic change can introduce a vulnerability or a bug that a purely mechanical refactor never could.
@@ -126,7 +125,7 @@ The marker has two jobs, and the first matters more than it looks.
   - a conversation is a bad place to keep a plan safe; the codebase, committed to the refactoring branch, is not
   - so right when you create `refactor/<topic>` (Step 3), before any change lands, seed it liberally with markers at every point the inventory identifies future work, an idea worth not losing, or a decision that won't be obvious from a later diff — not only at points of deliberate imperfection
   - a marker survives exactly the kind of context loss a plan that only ever existed in conversation does not
-  - **Skip this for a small refactoring.** A single-PR change, or the simple mechanical sweep in Section 6, doesn't have a plan large enough to be worth losing — seeding markers there is noise, not insurance. Reserve liberal marker-seeding for staged, multi-PR refactors, where the plan is genuinely too large to trust to any one session's memory.
+  - **Skip this for a small refactoring.** A single-PR change, or a single mechanical sweep, doesn't have a plan large enough to be worth losing — seeding markers there is noise, not insurance. Reserve liberal marker-seeding for staged, multi-PR refactors, where the plan is genuinely too large to trust to any one session's memory.
 - **Job 2 — flagging deliberate imperfection.** A staged refactor will, by design, pass through intermediate states that are imperfect on purpose — a type alias kept around so callers can migrate one PR at a time, a shim left in place until a later step removes it, an old code path still reachable until its last caller is gone.
   - **This is fine and expected.** The risk isn't the imperfection — it's forgetting about it once the PR that introduced it has merged and attention has moved on.
 
@@ -147,14 +146,11 @@ grep -rn "REFACTOR(" .
 
 **Diagnose:** `grep -rn "REFACTOR(" .` — must return no results before the final merge to `main`; any hit means a planned step never landed, and the refactor is not actually done even though every individual PR merged cleanly.
 
-## 6. Workflows (`ultracode`) vs. Human-in-the-Loop
+## 6. Never Chain Dependent Stages Without Review
 
-- Claude Code's Workflow feature (`ultracode`) orchestrates multiple sub-agents across multiple stages automatically, with no human checkpoint between them.
-- That is exactly the wrong shape for a staged refactor, whose entire value proposition is a human reviewing and merging each small PR _before_ the next step is allowed to build on it.
-- Running a multi-step refactor through Workflows collapses the review checkpoints this whole document exists to preserve — by the time a human looks at anything, several dependent stages may have already executed on top of a decision nobody signed off on.
-- Reach for Workflows/`ultracode` only when the refactor is genuinely a **single mechanical sweep in one pass** — one `gofmt -r` rule, one `eg` template, or one `modernize`-style fixer applied tree-wide, verified green by the build/vet/test loop, with nothing else in the inventory depending on it.
-  - That case has no staging problem to begin with: there is exactly one step, and it either lands or it doesn't.
-- For anything requiring progressive review across multiple merges — which is the common case for a real refactor — use the worktree + PR + human-review flow in Steps 3 and 4 instead, and do not reach for Workflows.
+- A staged refactor's value is a human reviewing and merging each small PR _before_ the next step builds on it.
+- Any orchestration that runs dependent stages back to back with no human checkpoint between them — a multi-stage agent workflow, a chain of sub-agents each starting from the previous one's unmerged branch — collapses those checkpoints: by the time a human looks, several stages may have executed on top of a decision nobody reviewed.
+- Parallel sub-agents on file-disjoint rows are fine (Step 4) — each lands as its own reviewed PR. Automating end to end is fine only for a **single mechanical sweep** (one `gofmt -r` rule, one `eg` template, one fixer, tree-wide, verified green) with nothing else depending on it — there is exactly one step, so there is nothing to stage.
 
 ## 7. Human Checkpoints
 

@@ -6,7 +6,7 @@ license: MIT
 compatibility: Designed for Claude Code, Codex or similar harness, and for projects using Golang.
 metadata:
   author: samber
-  version: "1.2.3"
+  version: "1.2.4"
   openclaw:
     emoji: "📚"
     homepage: https://github.com/samber/cc-skills-golang
@@ -21,53 +21,26 @@ allowed-tools: Read Edit Write Glob Grep Bash(go:*) Bash(golangci-lint:*) Bash(g
 
 # Go Libraries and Frameworks Recommendations
 
-## Core Philosophy
+## How to Recommend
 
-When recommending libraries, prioritize:
-
-1. **Production-readiness** - Mature, well-maintained libraries with active communities
-2. **Simplicity** - Go's philosophy favors simple, idiomatic solutions
-3. **Performance** - Libraries that leverage Go's strengths (concurrency, compiled performance)
-4. **Standard Library First** - SHOULD prefer stdlib when it covers the use case; only recommend external libs when they provide clear value
+- **Standard library first** — recommend a third-party library only when it adds clear value over the stdlib, and for a performance claim only after profiling shows the stdlib is the bottleneck; the best library is often none.
+- **Prefer the simplest mature option** — every dependency adds attack surface, maintenance burden, and transitive modules, so a large dependency footprint for a simple need, or a library that wraps the stdlib without adding value, is a net loss.
+- **Weigh maturity and maintenance status** — the libraries in [libraries.md](./references/libraries.md) are already vetted. Verify with `godig overview` for libraries outside it (→ See `samber/cc-skills-golang@golang-pkg-go-dev` skill), and treat a high `imported-by` count as a quality signal: widely-imported libraries are battle-tested and under stronger backward-compatibility pressure.
+- **Ask the developer before recommending an abandoned or unmaintained library** — adopting one is a supply-chain decision they should make knowingly.
 
 ## Reference Catalogs
 
-- [Standard Library - New & Experimental](./references/stdlib.md) — v2 packages, promoted x/exp packages, golang.org/x extensions
-- [Libraries by Category](./references/libraries.md) — vetted third-party libraries for web, database, testing, logging, messaging, and more
-- [Development Tools](./references/tools.md) — debugging, linting, testing, and dependency management tools
+- Read [stdlib.md](./references/stdlib.md) before recommending a third-party package — new v2 packages, promoted `x/exp` packages, and `golang.org/x` extensions may already cover the need.
+- Read [libraries.md](./references/libraries.md) when recommending or comparing libraries for a task — web, database, testing, logging, messaging, and more.
+- Read [tools.md](./references/tools.md) when the need is a developer tool (debugging, linting, testing, dependency management) rather than a library.
 
-Find more libraries here: <https://github.com/avelino/awesome-go>
+More libraries are listed at <https://github.com/avelino/awesome-go>.
 
-This skill is not exhaustive — refer to library documentation and code examples for more information:
-
-- When exploring a candidate library, → See `samber/cc-skills-golang@golang-pkg-go-dev` skill (`godig`) for docs, symbols, versions, importers, and known vulnerabilities — prefer it over Context7 for Go package facts.
-- Once a candidate is added to your build, → See `samber/cc-skills-golang@golang-gopls` skill (`gopls`) to browse its actual resolved source and compare candidates side by side.
-- Context7 remains a fallback for docs not indexed on pkg.go.dev.
-
-## General Guidelines
-
-When recommending libraries:
-
-1. **Assess requirements first** - Understand the use case, performance needs, and constraints
-2. **Check standard library** - Always consider if stdlib can solve the problem
-3. **Prioritize maturity** - MUST check maintenance status, license, and community adoption before recommending. Use a module's `imported-by` count on pkg.go.dev as a popularity and indirect quality signal — widely-imported libraries are more battle-tested and have stronger backward-compatibility pressure; → See `samber/cc-skills-golang@golang-pkg-go-dev` skill to count importers and compare alternatives
-4. **Consider complexity** - Simpler solutions are usually better in Go
-5. **Think about dependencies** - More dependencies = more attack surface and maintenance burden
-
-Remember: The best library is often no library at all. Go's standard library is excellent and sufficient for many use cases.
-
-## Anti-Patterns to Avoid
-
-- Over-engineering simple problems with complex libraries
-- Using libraries that wrap standard library functionality without adding value
-- Abandoned or unmaintained libraries: ask the developer before recommending these
-- Suggesting libraries with large dependency footprints for simple needs
-- Ignoring standard library alternatives
+This skill is not exhaustive — refer to library documentation and code examples for more information. Once a candidate is in your build, → See `samber/cc-skills-golang@golang-gopls` skill to browse its resolved source; Context7 is a fallback for docs not indexed on pkg.go.dev.
 
 ## Cross-References
 
 - → See `samber/cc-skills-golang@golang-dependency-management` skill for adding, auditing, and managing dependencies
-- → See `samber/cc-skills-golang@golang-pkg-go-dev` skill to vet a candidate library on pkg.go.dev — versions, importers, licenses, and known vulnerabilities — before adopting it
 - → See `samber/cc-skills-golang@golang-samber-do` skill for samber/do dependency injection details
 - → See `samber/cc-skills-golang@golang-samber-hot` skill for samber/hot in-memory caching details
 - → See `samber/cc-skills-golang@golang-samber-oops` skill for samber/oops error handling details

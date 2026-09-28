@@ -1,6 +1,6 @@
 # `gopls` CLI reference
 
-The Go team documents this interface as experimental — "not efficient, complete, flexible, or officially supported." Treat it as a debugging and one-shot-scripting fallback, not the primary way to drive `gopls`; prefer the MCP tools or the native `LSP` tool when either is available (see [mcp.md](mcp.md)).
+The Go team documents this interface as experimental — "not efficient, complete, flexible, or officially supported." Treat it as a debugging and one-shot-scripting fallback, not the primary way to drive `gopls`; prefer the MCP tools or a built-in LSP integration when either is available (see [mcp.md](mcp.md)).
 
 ## Table of contents
 

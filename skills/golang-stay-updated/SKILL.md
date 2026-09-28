@@ -6,7 +6,7 @@ license: MIT
 compatibility: Designed for Claude Code, Codex or similar harness, and for projects using Golang.
 metadata:
   author: samber
-  version: "1.3.2"
+  version: "1.3.3"
   openclaw:
     emoji: "📰"
     homepage: https://github.com/samber/cc-skills-golang
@@ -21,17 +21,15 @@ allowed-tools: Read Edit Write Glob Grep Bash(go:*) Bash(golangci-lint:*) Bash(g
 
 # Stay Updated with Go
 
-A curated guide to keeping your finger on the pulse of the Go ecosystem.
-
 ## Official Go Resources
 
-| Resource            | URL                                          |
-| ------------------- | -------------------------------------------- |
-| **go.dev**          | Official Go website with tutorials and tools |
-| **pkg.go.dev**      | Discover Go packages and documentation       |
-| **tour.golang.org** | Interactive Go tutorial                      |
-| **play.golang.org** | Go playground for testing code               |
-| **go.dev/blog**     | Official Go blog                             |
+| Resource | Description |
+| --- | --- |
+| **go.dev** | Official Go website with tutorials and tools |
+| **pkg.go.dev** | Discover Go packages and documentation |
+| **go.dev/tour** | Interactive Go tutorial (the Go Tour, formerly tour.golang.org) |
+| **go.dev/play** | Go Playground for testing code (formerly play.golang.org) |
+| **go.dev/blog** | Official Go blog |
 
 ## Newsletters
 
@@ -126,14 +124,17 @@ Follow these influential Go developers and contributors:
 | Applied Go | Go tutorials | <https://youtube.com/appliedgocode> |
 | Learn Go Programming | Beginner tutorials | <https://youtube.com/learn_goprogramming> |
 
-## Quick Tips for Staying Updated
+## Suggested Routine
 
-1. **Subscribe to 1-2 newsletters** - Don't overload yourself
+When the user asks for a plan rather than a list, suggest a light routine — the sources above are enough to drown in:
+
+1. **Subscribe to 1-2 newsletters**, not more
 2. **Follow 10-20 key people** on X/Bluesky who post regularly
-3. **Check Go.dev/blog weekly** for official announcements
+3. **Check go.dev/blog weekly** for official announcements
 4. **Join Go Slack** for real-time discussions
-5. **Bookmark pkg.go.dev** to discover new libraries — → See `samber/cc-skills-golang@golang-pkg-go-dev` skill to query a module's latest versions, docs, and vulnerabilities from the CLI
-6. **Attend a GopherCon** (virtual or in-person) yearly
+5. **Attend a GopherCon** (virtual or in-person) yearly
+
+To look up a specific module's latest versions, docs, or vulnerabilities → See `samber/cc-skills-golang@golang-pkg-go-dev` skill.
 
 ---
 
