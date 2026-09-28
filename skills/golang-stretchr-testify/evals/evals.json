@@ -110,13 +110,13 @@
   {
     "id": 9,
     "name": "pointer-comparison-trap",
-    "description": "Tests awareness that is.Equal(ptr1, ptr2) compares addresses, not values",
+    "description": "Tests knowing that assert.Equal deep-compares the values behind pointers (reflect.DeepEqual), so a failure comes from field differences, not addresses",
     "prompt": "I have two *User pointers pointing to different structs with the same field values. My test `assert.Equal(t, user1, user2)` is failing. Both users have Name='Alice' and Age=30. What's wrong?",
-    "trap": "Model may suggest various debugging approaches without identifying the core issue: Equal on pointers compares addresses",
+    "trap": "Model may repeat the common myth that Equal on pointers compares addresses and tell the user to dereference, missing the real cause (a differing unexported field, time.Time monotonic reading or location, or differing dynamic types)",
     "assertions": [
-      {"id": "9.1", "text": "Identifies that assert.Equal on pointers compares memory addresses, not struct values"},
-      {"id": "9.2", "text": "Recommends dereferencing the pointers (e.g., assert.Equal(t, *user1, *user2)) or using EqualExportedValues"},
-      {"id": "9.3", "text": "Mentions EqualExportedValues as an alternative for comparing only exported fields"}
+      {"id": "9.1", "text": "States that assert.Equal on pointers compares the pointed-to values (ObjectsAreEqual / reflect.DeepEqual), not memory addresses"},
+      {"id": "9.2", "text": "Points to a real cause of the failure: a differing unexported field, a time.Time monotonic reading or location, or differing dynamic types"},
+      {"id": "9.3", "text": "Mentions EqualExportedValues for comparing only exported fields (and Same/NotSame when pointer identity is what matters)"}
     ]
   },
   {

@@ -207,20 +207,20 @@ These skills are designed as **atomic, cross-referencing units**. A skill may re
 | ⭐️ | ✅ `golang-naming` | ⚡ ⚙️ | -23% | 86 | 1,992 | 6,656 |
 | ⭐️ | ✅ `golang-refactoring` | ⚡ 🧠 🤖 ⚙️ | — | 133 | 3,722 | 21,280 |
 | ⭐️ | ✅ `golang-safety` | ⚡ | -58% | 120 | 1,969 | 5,186 |
-| ⭐️ | ✅ `golang-testing` | ⚡ 🧠 🤖 ⚙️ | -32% | 98 | 4,253 | 8,805 |
-| ⭐️ | ✅ `golang-troubleshooting` | ⚡ 🧠 🤖 | -32% | 103 | 2,953 | 17,995 |
+| ⭐️ | ✅ `golang-testing` | ⚡ 🧠 🤖 ⚙️ | -32% | 98 | 2,460 | 8,708 |
+| ⭐️ | ✅ `golang-troubleshooting` | ⚡ 🧠 🤖 | -32% | 103 | 2,414 | 17,456 |
 | ⭐️ | ✅ `golang-security` | ⚡ 🧠 🤖 | -32% | 131 | 2,768 | 23,032 |
-|  | ✅ `golang-benchmark` | ⚡ 🧠 | -50% | 83 | 3,134 | 33,377 |
+|  | ✅ `golang-benchmark` | ⚡ 🧠 | -50% | 83 | 2,356 | 33,468 |
 |  | ✅ `golang-cli` | ⚡ | -43% | 111 | 2,324 | 6,139 |
 |  | ✅ `golang-concurrency` | ⚡ 🤖 ⚙️ | -39% | 110 | 1,906 | 7,006 |
 |  | ✅ `golang-context` | ⚡ ⚙️ | -34% | 82 | 1,044 | 4,107 |
-|  | ✅ `golang-continuous-integration` | ⚡ | -59% | 123 | 3,488 | 12,750 |
+|  | ✅ `golang-continuous-integration` | ⚡ | -59% | 123 | 2,896 | 12,376 |
 |  | ✅ `golang-dependency-injection` | ⚡ 🤖 ⚙️ | -47% | 133 | 2,991 | 5,376 |
 |  | ✅ `golang-dependency-management` | ⚡ | -54% | 125 | 2,474 | 5,612 |
 |  | ✅ `golang-structs-interfaces` | ⚡ ⚙️ | -35% | 91 | 2,715 | 4,141 |
 |  | ✅ `golang-lint` | ⚡ 🤖 | -41% | 95 | 1,874 | 6,327 |
-|  | ✅ `golang-observability` | ⚡ 🤖 ⚙️ | -37% | 105 | 3,069 | 19,524 |
-|  | ✅ `golang-performance` | ⚡ 🧠 🤖 | -39% | 107 | 2,219 | 19,813 |
+|  | ✅ `golang-observability` | ⚡ 🤖 ⚙️ | -37% | 105 | 2,257 | 18,749 |
+|  | ✅ `golang-performance` | ⚡ 🧠 🤖 | -39% | 107 | 1,991 | 19,585 |
 |  | ✅ `golang-gopls` | ⚡ | — | 116 | 2,259 | 12,254 |
 |  | ✅ `golang-pkg-go-dev` | ⚡ | — | 146 | 3,418 | 5,362 |
 |  | ✅ `golang-popular-libraries` | ⚡ | -30% | 110 | 1,135 | 5,047 |
@@ -247,7 +247,7 @@ These skills are designed as **atomic, cross-referencing units**. A skill may re
 | ✅ `golang-samber-ro` | ⚡ 🧠 | -50% | 104 | 2,928 | 11,840 |
 | ✅ `golang-samber-slog` | ⚡ | -19% | 104 | 3,154 | 10,660 |
 | ❌ `golang-temporal` |  | — | 0 | 0 | 0 |
-| ✅ `golang-stretchr-testify` | ⚡ | -47% | 72 | 1,866 | 2,685 |
+| ✅ `golang-stretchr-testify` | ⚡ | -47% | 72 | 2,143 | 2,962 |
 
 ## 🧪 Skill evaluations
 

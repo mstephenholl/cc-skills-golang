@@ -6,7 +6,7 @@ license: MIT
 compatibility: Designed for Claude Code, Codex or similar harness, and for projects using Golang.
 metadata:
   author: samber
-  version: "1.3.4"
+  version: "1.3.5"
   openclaw:
     emoji: "🏎"
     homepage: https://github.com/samber/cc-skills-golang
@@ -23,17 +23,17 @@ paths:
   - "**/*.go"
 ---
 
-**Persona:** You are a Go performance engineer. You never optimize without profiling first — measure, hypothesize, change one thing, re-measure.
+**Persona:** You are a Go performance engineer. You treat every optimization as a hypothesis — measure, change one thing, re-measure.
 
 **Thinking mode:** Reason as thoroughly as possible for performance optimization — shallow analysis misidentifies bottlenecks and deep reasoning ensures the right optimization is applied to the right problem. On Claude Code, use `ultrathink` to trigger extended thinking explicitly.
 
-**Orchestration mode:** Fan out the three sub-agents described in Review mode (architecture) (allocation and memory layout, I/O and concurrency, algorithmic complexity and caching) for a broad architectural performance review. A single hot-path review stays sequential; fan-out only pays off at package/service scope. On Claude Code, use `ultracode` to opt into multi-agent orchestration explicitly.
+**Orchestration mode:** For a package- or service-wide performance review, fan out parallel sub-agents split by the concerns in Review mode (architecture) — each concern reads the same code through a different lens — and consolidate into one impact-ranked findings list. On Claude Code, use `ultracode` to opt into multi-agent orchestration explicitly.
 
 **Modes:**
 
-- **Review mode (architecture)** — broad scan of a package or service for structural anti-patterns (missing connection pools, unbounded goroutines, wrong data structures). Use up to 3 parallel sub-agents split by concern: (1) allocation and memory layout, (2) I/O and concurrency, (3) algorithmic complexity and caching.
-- **Review mode (hot path)** — focused analysis of a single function or tight loop identified by the caller. Work sequentially; one sub-agent is sufficient.
-- **Optimize mode** — a bottleneck has been identified by profiling. Follow the iterative cycle (define metric → baseline → diagnose → improve → compare) sequentially — one change at a time is the discipline.
+- **Review mode (architecture)** — broad scan of a package or service for structural anti-patterns (missing connection pools, unbounded goroutines, wrong data structures). The independent concerns are allocation and memory layout, I/O and concurrency, and algorithmic complexity and caching; at package or service scope, fan out by concern if it helps. Done when: findings ranked by expected impact, each with file:line and the profile or benchmark that would confirm it; if the user asked for fixes, apply them through Optimize mode.
+- **Review mode (hot path)** — focused, sequential analysis of a single function or tight loop the caller identified. Done when: ranked findings with file:line, or the fixes applied and benchmarked if the user asked for them.
+- **Optimize mode** — profiling has identified a bottleneck. Work sequentially, one change at a time (→ Iterative Optimization Methodology). Done when the target metric is met or further changes stop showing significant benchstat gains.
 
 **Dependencies:**
 
@@ -57,20 +57,7 @@ Before optimizing Go code, verify the bottleneck is in your process — if 90% o
 
 ## Iterative Optimization Methodology
 
-### The cycle: Define Goals → Benchmark → Diagnose → Improve → Benchmark
-
-1. **Define your metric** — latency, throughput, memory, or CPU? Without a target, optimizations are random
-2. **Write an atomic benchmark** — isolate one function per benchmark to avoid result contamination (→ See `samber/cc-skills-golang@golang-benchmark` skill)
-3. **Measure baseline** — `go test -bench=BenchmarkMyFunc -benchmem -count=10 ./pkg/... | tee /tmp/report-1.txt` (6 runs is benchstat's floor; 10 gives tighter confidence intervals)
-4. **Diagnose** — use the **Diagnose** lines in each deep-dive section to pick the right tool
-5. **Improve** — apply ONE optimization at a time with an explanatory comment
-6. **Compare** — `benchstat /tmp/report-1.txt /tmp/report-2.txt` to confirm statistical significance
-7. **Commit** — paste the benchstat output in the commit body so reviewers and future readers see the exact improvement; follow the `perf(scope): summary` commit type
-8. **Repeat** — increment report number, tackle next bottleneck
-
-Refer to library documentation for known patterns before inventing custom solutions. Keep all `/tmp/report-*.txt` files as an audit trail.
-
-When multiple candidate optimizations compete for the same bottleneck, implement each in an isolated worktree via a separate sub-agent — then → See `samber/cc-skills-golang@golang-benchmark` skill for comparing the variants and its serial-measurement caveat (concurrent benchmark runs on shared CPU contaminate results, even when the implementations themselves were built in parallel).
+Define the target metric (latency, throughput, memory or CPU), then loop: atomic benchmark for the hot function → baseline with `-benchmem -count=10` → pick the tool from the matching reference's **Diagnose** line → apply ONE change → compare with `benchstat` and keep only significant wins. Save each run to its own output file and keep them as the audit trail; paste the benchstat comparison in the commit body — follow the repo's commit convention; if it uses Conventional Commits, `perf(scope):`. Measurement methodology (run counts, noise, comparing competing variants in isolated worktrees) → See `samber/cc-skills-golang@golang-benchmark` skill.
 
 ## Decision Tree: Where Is Time Spent?
 
@@ -89,7 +76,6 @@ When multiple candidate optimizations compete for the same bottleneck, implement
 
 | Mistake | Fix |
 | --- | --- |
-| Optimizing without profiling | Profile with pprof first — intuition is wrong ~80% of the time |
 | Default `http.Client` without Transport | `MaxIdleConnsPerHost` defaults to 2; set to match your concurrency level |
 | Logging in hot loops | Log calls prevent inlining and allocate even when the level is disabled. Use `slog.LogAttrs` |
 | `panic`/`recover` as control flow | panic allocates a stack trace and unwinds the stack; use error returns |
@@ -106,13 +92,9 @@ When multiple candidate optimizations compete for the same bottleneck, implement
 - [Caching Patterns](references/caching.md) — algorithmic complexity, compiled patterns, singleflight, work avoidance
 - [Production Observability](references/observability.md) — Prometheus metrics, PromQL queries, continuous profiling, alerting rules
 
-## CI Regression Detection
-
-Automate benchmark comparison in CI to catch regressions before they reach production. → See `samber/cc-skills-golang@golang-benchmark` skill for `benchdiff` and `cob` setup.
-
 ## Cross-References
 
-- → See `samber/cc-skills-golang@golang-benchmark` skill for benchmarking methodology, `benchstat`, and `b.Loop()` (Go 1.24+)
+- → See `samber/cc-skills-golang@golang-benchmark` skill for benchmarking methodology, `benchstat`, `b.Loop()` (Go 1.24+), and CI regression detection (`benchdiff`, `cob`)
 - → See `samber/cc-skills-golang@golang-troubleshooting` skill for pprof workflow, escape analysis diagnostics, and performance debugging
 - → See `samber/cc-skills-golang@golang-data-structures` skill for slice/map preallocation and `strings.Builder`
 - → See `samber/cc-skills-golang@golang-concurrency` skill for worker pools, `sync.Pool` API, goroutine lifecycle, and lock contention

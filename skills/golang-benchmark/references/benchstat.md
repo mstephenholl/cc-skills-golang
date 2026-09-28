@@ -61,11 +61,11 @@ Each input is a file containing `go test -bench` output. Optionally label inputs
 
 ### Step 0: Write benchmarks
 
-Use the standard Go benchmark function signature in `*_test.go`:
+Write benchmarks with `b.Loop()` (Go 1.24+), one sub-benchmark per variant or input size — benchstat compares rows by benchmark name, so each variant needs its own.
 
 ### Step 1: Measure baseline
 
-Run benchmarks with `-count=10` or more. Each run produces one data point — you need at least 10 to compute a meaningful confidence interval:
+Run benchmarks with `-count=10` or more. Each run produces one data point — 6 is benchstat's floor for a rough confidence interval, 10 is the standard for a pre-merge comparison (→ [How Many Runs?](#how-many-runs)):
 
 ```bash
 go test -run='^$' -bench=BenchmarkParse -benchmem -count=10 ./pkg/parser | tee old.txt

@@ -105,10 +105,11 @@ func LoggingMiddleware(next http.Handler) http.Handler {
 
 - `slog.JSONHandler` — JSON to stdout/stderr
 - `slog.TextHandler` — human-readable key=value
+- `slog.NewMultiHandler` (Go 1.26+) — fan-out to multiple handlers; prefer it over a third-party dependency for plain fan-out
 
 **Log record handling:**
 
-- [samber/slog-multi](https://github.com/samber/slog-multi) — fan-out to multiple handlers, routing, failover
+- [samber/slog-multi](https://github.com/samber/slog-multi) — routing, failover, load balancing and pipelines beyond plain fan-out
 - [samber/slog-sampling](https://github.com/samber/slog-sampling) — sample high-volume logs to reduce cost
 - [samber/slog-formatter](https://github.com/samber/slog-formatter) — format/transform log attributes
 

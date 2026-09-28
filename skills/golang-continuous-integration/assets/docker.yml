@@ -20,6 +20,7 @@ jobs:
       - name: Build image
         run: docker build -t myapp:ci .
 
+      # Fails on CRITICAL/HIGH vulnerabilities; results go to the Security tab.
       - name: Run Trivy
         uses: aquasecurity/trivy-action@v0.35.0
         with:
@@ -27,7 +28,7 @@ jobs:
           format: sarif
           output: trivy-results.sarif
           severity: CRITICAL,HIGH
-          exit-code: '1'
+          exit-code: "1"
 
       - name: Upload Trivy results
         if: always()
@@ -48,12 +49,15 @@ jobs:
     steps:
       - uses: actions/checkout@v6
 
+      # QEMU emulates non-native platforms — drop it if you only build for the
+      # runner's own platform. Keep Buildx: the SBOM/provenance attestations need it.
       - name: Set up QEMU
         uses: docker/setup-qemu-action@v3
 
       - name: Set up Docker Buildx
         uses: docker/setup-buildx-action@v3
 
+      # GHCR uses the built-in GITHUB_TOKEN — no extra secret needed.
       - name: Log in to GitHub Container Registry
         if: github.event_name != 'pull_request'
         uses: docker/login-action@v3
@@ -62,6 +66,8 @@ jobs:
           username: ${{ github.actor }}
           password: ${{ secrets.GITHUB_TOKEN }}
 
+      # Docker Hub needs the DOCKERHUB_USERNAME and DOCKERHUB_TOKEN repository
+      # secrets. For GHCR-only, remove this step and the docker.io/ line below.
       - name: Log in to Docker Hub
         if: github.event_name != 'pull_request'
         uses: docker/login-action@v3
@@ -69,6 +75,7 @@ jobs:
           username: ${{ secrets.DOCKERHUB_USERNAME }}
           password: ${{ secrets.DOCKERHUB_TOKEN }}
 
+      # Generates semver tags (v1.2.3 -> 1.2.3, 1.2, 1), branch tags (main) and SHA tags.
       - name: Extract metadata
         id: meta
         uses: docker/metadata-action@v5
@@ -88,9 +95,11 @@ jobs:
         uses: docker/build-push-action@v6
         with:
           context: .
+          # Supply-chain attestations; need attestations: write + id-token: write.
           provenance: mode=max
           sbom: true
+          # PRs build the image to validate the Dockerfile but never publish it.
           push: ${{ github.event_name != 'pull_request' }}
-          platforms: linux/amd64,linux/arm64
+          platforms: linux/amd64,linux/arm64 # remove platforms you don't ship
           tags: ${{ steps.meta.outputs.tags }}
           labels: ${{ steps.meta.outputs.labels }}

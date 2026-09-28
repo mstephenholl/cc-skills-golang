@@ -13,8 +13,9 @@ jobs:
     name: Test (Go ${{ matrix.go }})
     runs-on: ubuntu-latest
     strategy:
-      fail-fast: false
+      fail-fast: false # a failure on one Go version must not cancel the others
       matrix:
+        # From go.mod's minimum minor version through stable.
         go:
           - "1.26"
           - "1.27"

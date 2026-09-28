@@ -6,7 +6,7 @@ license: MIT
 compatibility: Designed for Claude Code, Codex or similar harness, and for projects using Golang.
 metadata:
   author: samber
-  version: "1.3.3"
+  version: "1.3.4"
   openclaw:
     emoji: "📊"
     homepage: https://github.com/samber/cc-skills-golang
@@ -34,8 +34,6 @@ paths:
 # Go Benchmarking & Performance Measurement
 
 Performance improvement does not exist without measures — if you can measure it, you can improve it.
-
-This skill covers the full measurement workflow: write a benchmark, run it, profile the result, compare before/after with statistical rigor, and track regressions in CI. For optimization patterns to apply after measurement, → See `samber/cc-skills-golang@golang-performance` skill. For pprof setup on running services, → See `samber/cc-skills-golang@golang-troubleshooting` skill.
 
 ## Writing Benchmarks
 
@@ -66,64 +64,29 @@ Legacy `b.N` loops still compile and are fine to keep when preserving existing b
 
 Go 1.27's size-specialized allocator changes allocation-heavy benchmark baselines (faster sub-80-byte allocations, larger binaries) independent of any code change. Treat a `benchstat` comparison that straddles the Go 1.26→1.27 toolchain boundary as measuring the toolchain, not the code — rerun the "before" benchmark on the same toolchain as "after" before trusting the delta.
 
-### Memory tracking
+### Custom metrics
 
 ```go
-func BenchmarkAlloc(b *testing.B) {
-    b.ReportAllocs() // or run with -benchmem flag
-    var sink []byte
-    for b.Loop() {
-        sink = make([]byte, 1024)
-    }
-    _ = sink
+for b.Loop() {
+    Encode(data)
 }
-```
-
-`b.ReportMetric()` adds custom metrics (e.g., throughput):
-
-```go
-b.ReportMetric(float64(totalBytes)/b.Elapsed().Seconds(), "bytes/s") // b.Elapsed() is only valid inside b.Loop()
-```
-
-### Sub-benchmarks and table-driven
-
-```go
-func BenchmarkEncode(b *testing.B) {
-    for _, size := range []int{64, 256, 4096} {
-        b.Run(fmt.Sprintf("size=%d", size), func(b *testing.B) {
-            data := make([]byte, size)
-            for b.Loop() {
-                Encode(data)
-            }
-        })
-    }
-}
+// after the loop: b.Loop() has stopped the timer, so b.Elapsed() covers only the timed iterations
+b.ReportMetric(float64(b.N*len(data))/b.Elapsed().Seconds(), "bytes/s")
 ```
 
 ## Running Benchmarks
 
 ```bash
-go test -bench=BenchmarkEncode -benchmem -count=10 ./pkg/... | tee bench.txt
+go test -run='^$' -bench=BenchmarkEncode -benchmem -count=10 ./pkg/... | tee bench.txt
 ```
 
-| Flag                   | Purpose                                   |
-| ---------------------- | ----------------------------------------- |
-| `-bench=.`             | Run all benchmarks (regexp filter)        |
-| `-benchmem`            | Report allocations (B/op, allocs/op)      |
-| `-count=10`            | Run 10 times for statistical significance |
-| `-benchtime=3s`        | Minimum time per benchmark (default 1s)   |
-| `-cpu=1,2,4`           | Run with different GOMAXPROCS values      |
-| `-cpuprofile=cpu.prof` | Write CPU profile                         |
-| `-memprofile=mem.prof` | Write memory profile                      |
-| `-trace=trace.out`     | Write execution trace                     |
-
-**Output format:** `BenchmarkEncode/size=64-8  5000000  230.5 ns/op  128 B/op  2 allocs/op` — the `-8` suffix is GOMAXPROCS, `ns/op` is time per operation, `B/op` is bytes allocated per op, `allocs/op` is heap allocation count per op.
+Read [go-test-bench.md](./references/go-test-bench.md) when writing sub-benchmarks, choosing other `go test` flags (`-benchtime`, `-cpu`, profile outputs), or decoding a raw `go test -bench` result line.
 
 ## Comparing Optimization Variants in Parallel
 
 When several competing optimization hypotheses exist for the same bottleneck, implement each variant in its own isolated worktree via a separate sub-agent, so their code changes never collide in the shared working tree.
 
-**Run the benchmarks serially, not concurrently.** Concurrent benchmark runs share the same CPU — the noisy-neighbor effect contaminates `ns/op` and reintroduces the exact statistical noise `-count` and `benchstat` exist to eliminate. Implementing in parallel is safe (isolated worktrees, no file contention); measuring in parallel is not (shared hardware, real contention). Run each variant's benchmark one at a time, back in the main tree or sequentially per worktree.
+**Run the benchmarks serially, not concurrently** — one variant at a time, back in the main tree or sequentially per worktree. Concurrent runs share the same CPU, so the noisy-neighbor effect contaminates `ns/op` and reintroduces the exact noise `-count` and `benchstat` exist to eliminate. Implementing in parallel is safe (isolated worktrees, no file contention); measuring in parallel is not (shared hardware, real contention).
 
 Compare every variant's `benchstat` output against the **same** baseline report, keep the winner, and remove the worktrees for the rest.
 
@@ -131,7 +94,7 @@ Compare every variant's `benchstat` output against the **same** baseline report,
 
 Paste benchstat output in the commit body when the change has a measurable performance impact. This documents _why_ an optimization was made, prevents future readers from reverting it, and lets reviewers verify the claim without re-running benchmarks.
 
-Commit format:
+Commit body example:
 
 ```
 perf(parser): reduce Parse allocations 50% with sync.Pool
@@ -157,7 +120,7 @@ Parse-32   12.00 ± 0%   6.000 ± 0%  -50.00% (p=0.000 n=10)
 - Only include benchmarks directly affected by the change — strip unrelated rows
 - Never paste results with `~` (no statistical significance) — the improvement cannot be claimed
 - Include the hardware context line (`goos/goarch/cpu`) so results are reproducible
-- Use `perf(scope):` commit type for performance-only changes
+- Follow the repo's commit convention; if it uses Conventional Commits, use `perf(scope):` for performance-only changes
 
 ## Profiling from Benchmarks
 
@@ -177,25 +140,17 @@ go test -bench=BenchmarkParse -trace=trace.out ./pkg/parser
 go tool trace trace.out
 ```
 
-For full pprof CLI reference (all commands, non-interactive mode, profile interpretation), see [pprof Reference](./references/pprof.md). For execution trace interpretation, see [Trace Reference](./references/trace.md). For statistical comparison, see [benchstat Reference](./references/benchstat.md).
-
 ## Reference Files
 
-- **[pprof Reference](./references/pprof.md)** — Interactive and non-interactive analysis of CPU, memory, and goroutine profiles. Full CLI commands, profile types (CPU vs alloc*objects vs inuse_space), web UI navigation, and interpretation patterns. Use this to dive deep into \_where* time and memory are being spent in your code.
-
-- **[benchstat Reference](./references/benchstat.md)** — Statistical comparison of benchmark runs with rigorous confidence intervals and p-value tests. Covers output reading, filtering old benchmarks, interleaving results for visual clarity, and regression detection. Use this when you need to prove a change made a meaningful performance difference, not just a lucky run.
-
-- **[Trace Reference](./references/trace.md)** — Execution tracer for understanding _when_ and _why_ code runs. Visualizes goroutine scheduling, garbage collection phases, network blocking, and custom span annotations. Use this when pprof (which shows _where_ CPU goes) isn't enough — you need to see the timeline of what happened.
-
-- **[Diagnostic Tools](./references/tools.md)** — Quick reference for ancillary tools: fieldalignment (struct padding waste), GODEBUG (runtime logging flags), fgprof (frame graph profiles), race detector (concurrency bugs), and others. Use this when you have a specific symptom and need a focused diagnostic — don't reach for pprof if a simpler tool already answers your question.
-
-- **[Compiler Analysis](./references/compiler-analysis.md)** — Low-level compiler optimization insights: escape analysis (when values move to the heap), inlining decisions (which function calls are eliminated), SSA dump (intermediate representation), and assembly output. Use this when benchmarks show allocations you didn't expect, or when you want to verify the compiler did what you intended.
-
-- **[CI Regression Detection](./references/ci-regression.md)** — Automated performance regression gating in CI pipelines. Covers three tools (benchdiff for quick PR comparisons, cob for strict threshold-based gating, gobenchdata for long-term trend dashboards), noisy neighbor mitigation strategies (why cloud CI benchmarks vary 5-10% even on quiet machines), and self-hosted runner tuning to make benchmarks reproducible. Use this when you want to ensure pull requests don't silently slow down your codebase — detecting regressions early prevents shipping performance debt.
-
-- **[Investigation Session](./references/investigation-session.md)** — Production performance troubleshooting workflow combining Prometheus runtime metrics (heap size, GC frequency, goroutine counts), PromQL queries to correlate metrics with code changes, runtime configuration flags (GODEBUG env vars to enable GC logging), and cost warnings (when you're hitting performance tax). Use this when production benchmarks look good but real traffic behaves differently.
-
-- **[Prometheus Go Metrics Reference](./references/prometheus-go-metrics.md)** — Complete listing of Go runtime metrics actually exposed as Prometheus metrics by `prometheus/client_golang`. Covers 30 default metrics, 40+ optional metrics (Go 1.17+), process metrics, and common PromQL queries. Distinguishes between `runtime/metrics` (Go internal data) and Prometheus metrics (what you scrape from `/metrics`). Use this when setting up monitoring dashboards or writing PromQL queries for production alerts.
+- [go-test-bench.md](./references/go-test-bench.md) — when writing sub-benchmarks, picking `go test` bench flags, or decoding a raw result line
+- [benchstat.md](./references/benchstat.md) — when comparing runs, reading `~`/p-values/±%, choosing `-count`, interleaving runs, or filtering and projecting results
+- [pprof.md](./references/pprof.md) — when reading a CPU, heap, goroutine, mutex or block profile, or filtering, labeling, diffing or exporting one
+- [trace.md](./references/trace.md) — when latency is high but CPU is low, or when investigating scheduling, GC phases, annotations or the flight recorder
+- [compiler-analysis.md](./references/compiler-analysis.md) — when a benchmark shows allocations or call overhead you didn't expect (escape analysis, inlining, bounds checks, SSA, assembly)
+- [tools.md](./references/tools.md) — when a narrower diagnostic answers the question (GODEBUG, `runtime/metrics`, `expvar`, fieldalignment, fgprof, perf)
+- [ci-regression.md](./references/ci-regression.md) — when adding benchmark gating to a pipeline, choosing benchdiff/cob/gobenchdata, or tuning runners for stable results
+- [investigation-session.md](./references/investigation-session.md) — when production behaves differently from benchmarks and you need a temporary instrumented session (PromQL, host correlation, cost warnings)
+- [prometheus-go-metrics.md](./references/prometheus-go-metrics.md) — when writing PromQL on Go runtime metrics or enabling the `runtime/metrics` collectors
 
 ## Cross-References
 
