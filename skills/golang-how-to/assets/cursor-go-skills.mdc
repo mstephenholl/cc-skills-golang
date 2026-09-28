@@ -1,14 +1,18 @@
 ---
-description: Load the Go skills orchestrator before any Go task
-alwaysApply: true
+description: Conditional Go skill directives for this project
+globs:
+  - "**/*.go"
+  - "**/go.mod"
+  - "**/go.work"
+alwaysApply: false
 ---
 
-Before any Go coding, review, debugging, troubleshooting, or setup task, load the `samber/cc-skills-golang@golang-how-to` skill first — it routes to whichever other Go skills the task needs.
+For Go tasks that span several concerns (a new service, a refactor, an audit), or when two Go skills seem to overlap, consult the `samber/cc-skills-golang@golang-how-to` skill to choose which Go skills to load.
 
-## Required Go skills
+## Go skills
 
-The following Go skills from `samber/cc-skills-golang` MUST always be applied when working on this project. Load them at the start of every Go-related task, regardless of whether the user explicitly mentions them.
+Apply these `samber/cc-skills-golang` skills when their condition matches the task:
 
-- `samber/cc-skills-golang@golang-error-handling`
-- `samber/cc-skills-golang@golang-security`
-- `samber/cc-skills-golang@golang-testing`
+- `samber/cc-skills-golang@golang-error-handling` — when defining error types, or deciding whether to wrap, return, or log an error
+- `samber/cc-skills-golang@golang-security` — when untrusted input reaches SQL, shell, templates, paths, or URLs, or when touching crypto, auth, cookies, or secrets
+- `samber/cc-skills-golang@golang-testing` — when writing or changing tests

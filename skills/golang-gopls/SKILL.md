@@ -6,7 +6,7 @@ license: MIT
 compatibility: Designed for Claude Code, Codex or similar harness. Requires the gopls binary (go install golang.org/x/tools/gopls@latest) v0.20+ on PATH.
 metadata:
   author: samber
-  version: "1.1.2"
+  version: "1.1.3"
   openclaw:
     emoji: "🛰️"
     homepage: https://github.com/samber/cc-skills-golang
@@ -49,19 +49,19 @@ Full mapping of every capability to its CLI command, MCP tool, and native `LSP` 
 - **Navigation** — jump to a definition, an implementation, or trace a call graph before touching code you didn't write. Details: [references/features.md](references/features.md#navigation).
 - **Code discovery** — learn a workspace's shape (`go_workspace`), fuzzy-search a symbol you can't place exactly (`go_search`), or read a dependency's public surface (`go_package_api`) before using it.
 - **Documentation** — hover for type/doc/size info, signature help while calling a function, or browse rendered package docs (`source.doc`, including internal packages pkg.go.dev never sees).
-- **Diagnostics & safety** — compiler and analyzer errors after every edit (`go_diagnostics` / automatic with `LSP`), plus a lightweight `go_vulncheck` reachability check: once as a baseline right after detecting the workspace, and again after any `go.mod` change.
+- **Diagnostics & safety** — compiler and analyzer errors after every edit (`go_diagnostics` / automatic with `LSP`), plus a lightweight `go_vulncheck` reachability check after a `go.mod` change or when the task is security-related.
 - **Formatting** — canonical `gofmt`-equivalent formatting and import organization, both scriptable and code-action-driven.
 - **Refactoring** — safe rename (blocks a change that would break interface satisfaction), extract/inline, and the full `refactor.rewrite.*` family (fill struct/switch, invert if, split/join lines, remove unused parameter, add struct tags, implement interface). Full catalog with gotchas: [references/features.md](references/features.md#transformation).
 
 ## Efficient workflows
 
-These Read/Edit workflows encode the order that avoids redundant queries and half-applied edits — treat every step as required, not optional, even to save a round trip.
+These Read/Edit workflows encode the order that avoids redundant queries and half-applied edits. Skip the steps a task doesn't need — a question about one function needs no workspace survey.
 
-- **Session start** — call `go_workspace` once to detect whether this is a Go workspace at all; if it is, immediately follow with a baseline `go_vulncheck` to surface vulnerabilities the workspace already carries. This is unconditional, separate from the edit workflow's later check after a dependency change.
+- **Workspace check** — call `go_workspace` once before relying on other gopls results, to confirm this is a Go workspace and learn its layout. Run a baseline `go_vulncheck` only when the task touches dependencies or security — a scan on every session costs time on tasks that never need it.
 
 **Read workflow** (understand before touching anything):
 
-1. `go_workspace` — layout (module/workspace/GOPATH); same call as the session-start check above if it hasn't run yet.
+1. `go_workspace` — layout (module/workspace/GOPATH); skip if the workspace check above already ran.
 2. `go_search` — fuzzy-locate a type/function/variable by name.
 3. `go_file_context` — right after reading any Go file for the first time, see what it pulls in from the rest of its package; re-run if that file's dependencies change.
 4. `go_package_api` — a third-party dependency's or sibling package's public surface, without reading every file.
@@ -71,7 +71,7 @@ These Read/Edit workflows encode the order that avoids redundant queries and hal
 1. Read first (workflow above).
 2. `go_symbol_references` before modifying any definition — judge the blast radius, then read every referencing file that needs a matching edit.
 3. Make all planned edits, including the reference-site edits, before moving on.
-4. `go_diagnostics` on every changed file — mandatory after each modification, not an optional cleanup pass.
+4. `go_diagnostics` on every changed file after each modification — the MCP server doesn't push diagnostics on its own the way the native `LSP` tool does.
 5. Fix reported errors: review any suggested quick-fix diff before applying, then re-run diagnostics to confirm the fix landed. Ignore hint/info diagnostics unrelated to the task. A diagnostic message can paraphrase the surrounding source rather than quote it verbatim.
 6. Only if `go.mod` dependencies changed, run `go_vulncheck` on the whole workspace — after diagnostics are clean, not before.
 7. Run `go test <changed-package-paths>` — not `./...` unless explicitly asked, since a full-repo run slows the iteration loop.

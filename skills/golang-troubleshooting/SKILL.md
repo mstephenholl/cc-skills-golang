@@ -6,7 +6,7 @@ license: MIT
 compatibility: Designed for Claude Code, Codex or similar harness, and for projects using Golang.
 metadata:
   author: samber
-  version: "1.3.1"
+  version: "1.3.2"
   openclaw:
     emoji: "🔍"
     homepage: https://github.com/samber/cc-skills-golang
@@ -46,7 +46,7 @@ When the user reports a bug, crash, performance problem, or unexpected behavior 
 
 1. **Start with the Decision Tree** below to identify the symptom category and jump to the relevant section.
 2. **Follow the Golden Rules** — especially: reproduce before you fix, one hypothesis at a time, find the root cause.
-3. **Work through the General Debugging Methodology** step by step. Do not skip steps.
+3. **When the cause isn't evident after reproducing, work through the [General Debugging Methodology](references/methodology.md)** in order — an obvious cause (a typo, a compile error that names the line) needs no full methodology.
 4. **Watch for Red Flags** in your own reasoning. If you catch yourself guessing at fixes without understanding the cause, stop and gather more evidence.
 5. **Escalate tools incrementally.** Start with the simplest diagnostic (`fmt.Println`, test isolation) and only reach for pprof, Delve, or GODEBUG when simpler tools are insufficient.
 6. **Never propose a fix you cannot explain.** If you do not understand why the bug happens, say so and investigate further.

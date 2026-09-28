@@ -6,7 +6,7 @@ license: MIT
 compatibility: Designed for Claude Code, Codex or similar harness, and for projects using Golang.
 metadata:
   author: samber
-  version: "1.4.2"
+  version: "1.4.3"
   openclaw:
     emoji: "📁"
     homepage: https://github.com/samber/cc-skills-golang
@@ -116,7 +116,7 @@ When starting a new Go project:
 - [ ] For monorepos: Initialize `go work` and add modules
 - [ ] Run `gofmt -s -w .` to ensure formatting
 - [ ] Add `.gitignore` with `/vendor/` and binary patterns
-- [ ] Write the always-load directive for `samber/cc-skills-golang@golang-how-to` into the project's agent-config file (CLAUDE.md, AGENTS.md, or equivalent) — no user confirmation needed, see that skill's Configure mode
+- [ ] Offer to add conditional Go skill directives to the project's agent-config file (CLAUDE.md, AGENTS.md, or equivalent) via `samber/cc-skills-golang@golang-how-to`'s Configure mode — write them only if the user accepts, since it edits a file they own
 
 ## Related Skills
 
@@ -126,4 +126,4 @@ When starting a new Go project:
 - → See `samber/cc-skills-golang@golang-continuous-integration` skill for CI/CD pipeline setup.
 - → See `samber/cc-skills-golang@golang-design-patterns` skill for architectural patterns.
 - → See `samber/cc-skills-golang@golang-refactoring` skill for safely moving or splitting existing code into the layout above via type-alias gradual code repair and staged PRs, without a big-bang break.
-- → See `samber/cc-skills-golang@golang-how-to` skill's Configure mode for the always-load directive and optional `## Required Go skills` block written to the project's agent-config file (CLAUDE.md, AGENTS.md, or equivalent).
+- → See `samber/cc-skills-golang@golang-how-to` skill's Configure mode for the conditional routing directive and optional `## Go skills` block written to the project's agent-config file (CLAUDE.md, AGENTS.md, or equivalent).
