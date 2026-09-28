@@ -5,7 +5,7 @@ import (
 	"github.com/spf13/viper"
 )
 
-func flagExamples() {
+func flagExamples(rootCmd, serveCmd *cobra.Command) {
 	// === Persistent vs Local ===
 
 	// Persistent — inherited by all subcommands
@@ -36,6 +36,5 @@ func flagExamples() {
 	// This ensures viper.GetInt("port") returns the flag value, env var MYAPP_PORT,
 	// or config file value — whichever has highest precedence.
 
-	serveCmd.Flags().IntP("port", "p", 8080, "port to listen on")
-	viper.BindPFlag("port", serveCmd.Flags().Lookup("port"))
+	viper.BindPFlag("port", serveCmd.Flags().Lookup("port")) // "port" is defined above; defining it twice panics
 }

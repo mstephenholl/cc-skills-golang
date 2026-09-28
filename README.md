@@ -199,22 +199,22 @@ These skills are designed as **atomic, cross-referencing units**. A skill may re
 | ⭐️ | ✅ `golang-code-style` | ⚡ 🤖 ⚙️ | -40% | 118 | 2,153 | 2,769 |
 | ⭐️ | ✅ `golang-data-structures` | ⚡ | -39% | 92 | 1,754 | 6,118 |
 | ⭐️ | ✅ `golang-database` | ⚡ ⚙️ | -38% | 80 | 1,785 | 6,611 |
-| ⭐️ | ✅ `golang-design-patterns` | ⚡ ⚙️ | -37% | 118 | 1,842 | 9,302 |
+| ⭐️ | ✅ `golang-design-patterns` | ⚡ ⚙️ | -37% | 118 | 1,842 | 9,341 |
 | ⭐️ | ✅ `golang-documentation` | ⚡ 🤖 ⚙️ | -53% | 76 | 1,585 | 10,376 |
-| ⭐️ | ✅ `golang-error-handling` | ⚡ 🤖 ⚙️ | -26% | 116 | 1,414 | 4,829 |
+| ⭐️ | ✅ `golang-error-handling` | ⚡ 🤖 ⚙️ | -26% | 116 | 1,429 | 4,844 |
 | ⭐️ | ✅ `golang-how-to` | ⚡ | — | 104 | 2,650 | 16,666 |
-| ⭐️ | ✅ `golang-modernize` | ⚡ 🤖 | -43% | 104 | 2,763 | 14,806 |
+| ⭐️ | ✅ `golang-modernize` | ⚡ 🤖 | -43% | 104 | 2,782 | 14,946 |
 | ⭐️ | ✅ `golang-naming` | ⚡ ⚙️ | -23% | 86 | 1,992 | 6,656 |
 | ⭐️ | ✅ `golang-refactoring` | ⚡ 🧠 ⚙️ | — | 133 | 3,011 | 20,336 |
 | ⭐️ | ✅ `golang-safety` | ⚡ | -58% | 120 | 1,969 | 5,186 |
 | ⭐️ | ✅ `golang-testing` | ⚡ 🧠 🤖 ⚙️ | -32% | 98 | 2,460 | 8,708 |
-| ⭐️ | ✅ `golang-troubleshooting` | ⚡ 🧠 🤖 | -32% | 103 | 2,414 | 17,456 |
-| ⭐️ | ✅ `golang-security` | ⚡ 🧠 🤖 | -32% | 131 | 2,829 | 23,156 |
-|  | ✅ `golang-benchmark` | ⚡ 🧠 | -50% | 83 | 2,406 | 33,518 |
-|  | ✅ `golang-cli` | ⚡ | -43% | 111 | 1,753 | 5,669 |
+| ⭐️ | ✅ `golang-troubleshooting` | ⚡ 🧠 🤖 | -32% | 103 | 2,432 | 17,474 |
+| ⭐️ | ✅ `golang-security` | ⚡ 🧠 🤖 | -32% | 131 | 2,829 | 23,480 |
+|  | ✅ `golang-benchmark` | ⚡ 🧠 | -50% | 83 | 2,406 | 33,691 |
+|  | ✅ `golang-cli` | ⚡ | -43% | 111 | 1,785 | 5,943 |
 |  | ✅ `golang-concurrency` | ⚡ 🤖 ⚙️ | -39% | 110 | 1,906 | 7,006 |
 |  | ✅ `golang-context` | ⚡ ⚙️ | -34% | 82 | 1,044 | 4,107 |
-|  | ✅ `golang-continuous-integration` | ⚡ | -59% | 123 | 2,909 | 12,389 |
+|  | ✅ `golang-continuous-integration` | ⚡ | -59% | 123 | 2,909 | 12,392 |
 |  | ✅ `golang-dependency-injection` | ⚡ ⚙️ | -47% | 133 | 1,889 | 2,229 |
 |  | ✅ `golang-dependency-management` | ⚡ | -54% | 125 | 1,646 | 4,735 |
 |  | ✅ `golang-structs-interfaces` | ⚡ ⚙️ | -35% | 91 | 1,708 | 3,060 |
@@ -223,7 +223,7 @@ These skills are designed as **atomic, cross-referencing units**. A skill may re
 |  | ✅ `golang-performance` | ⚡ 🧠 🤖 | -39% | 107 | 1,991 | 19,585 |
 |  | ✅ `golang-gopls` | ⚡ | — | 116 | 1,544 | 11,643 |
 |  | ✅ `golang-pkg-go-dev` | ⚡ | — | 146 | 2,450 | 5,204 |
-|  | ✅ `golang-popular-libraries` | ⚡ | -30% | 110 | 922 | 4,834 |
+|  | ✅ `golang-popular-libraries` | ⚡ | -30% | 110 | 922 | 4,910 |
 |  | ✅ `golang-project-layout` | ⚡ | -38% | 84 | 1,614 | 6,120 |
 |  | ✅ `golang-stay-updated` | ⚡ | -56% | 106 | 1,884 | 1,884 |
 
@@ -236,7 +236,7 @@ These skills are designed as **atomic, cross-referencing units**. A skill may re
 | ✅ `golang-grpc` | ⚡ | -41% | 68 | 2,090 | 5,214 |
 | ✅ `golang-spf13-cobra` | ⚡ | — | 118 | 1,876 | 7,675 |
 | ✅ `golang-spf13-viper` | ⚡ | — | 105 | 2,334 | 8,379 |
-| ✅ `golang-swagger` | ⚡ | — | 67 | 2,275 | 3,564 |
+| ✅ `golang-swagger` | ⚡ | — | 67 | 2,272 | 3,561 |
 | ✅ `golang-uber-dig` | ⚡ | -10% | 84 | 1,945 | 5,972 |
 | ✅ `golang-uber-fx` | ⚡ | -5% | 78 | 2,307 | 6,987 |
 | ✅ `golang-samber-do` | ⚡ | -81% | 72 | 1,722 | 3,787 |

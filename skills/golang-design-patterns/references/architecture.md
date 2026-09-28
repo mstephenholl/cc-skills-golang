@@ -30,17 +30,22 @@ Domain logic MUST remain pure — no framework or infrastructure dependencies. T
 // domain/order.go — pure business logic, no imports from infrastructure
 package domain
 
+// Unexported fields — every change goes through methods that enforce the rules
 type Order struct {
-    ID     string
-    Items  []Item
-    Status OrderStatus
+    id     string
+    items  []Item
+    status OrderStatus
+}
+
+func NewOrder(id string) *Order {
+    return &Order{id: id, status: StatusDraft}
 }
 
 func (o *Order) AddItem(item Item) error {
-    if o.Status != StatusDraft {
+    if o.status != StatusDraft {
         return ErrOrderNotEditable
     }
-    o.Items = append(o.Items, item)
+    o.items = append(o.items, item)
     return nil
 }
 ```

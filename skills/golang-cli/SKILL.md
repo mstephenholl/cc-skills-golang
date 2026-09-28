@@ -6,7 +6,7 @@ license: MIT
 compatibility: Designed for Claude Code, Codex or similar harness, and for projects using Golang.
 metadata:
   author: samber
-  version: "1.3.3"
+  version: "1.3.4"
   openclaw:
     emoji: "💻"
     homepage: https://github.com/samber/cc-skills-golang
@@ -40,7 +40,7 @@ Runnable examples live in [assets/examples/](assets/examples/): `root.go` for th
 
 ## Command layout
 
-Put one file per command in `cmd/<app>/`, each registering itself with `rootCmd.AddCommand` in `init()`. Keep `main.go` to calling `Execute()` and turning its error into an exit code, and initialize config in the root command's `PersistentPreRunE` so every subcommand sees the same resolved values.
+Put one file per command in `cmd/<app>/`, each exposing a `newXxxCmd()` constructor that `newRootCmd()` wires with `AddCommand` — a fresh tree per call keeps flag state from leaking between tests, which package-level commands registered in `init()` cannot. Keep `main.go` to calling `Execute()` and turning its error into an exit code, and initialize config in the root command's `PersistentPreRunE` so every subcommand sees the same resolved values.
 
 Set both on the root command:
 

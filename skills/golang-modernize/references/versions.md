@@ -70,7 +70,7 @@
   - [`go test` runs the `stdversion` vet check _(Go 1.27+)_](#go-test-runs-the-stdversion-vet-check-go-127)
   - [`go mod tidy` merges duplicate require blocks _(Go 1.27+)_](#go-mod-tidy-merges-duplicate-require-blocks-go-127)
   - [Small Go 1.27+ API preferences](#small-go-127-api-preferences)
-  - [Go 1.27+ version-bump risk checklist (verify, don't rewrite)](#go-127-version-bump-risk-checklist-verify-dont-rewrite)
+  - [Go 1.27+ version-bump risk checklist (verify before bumping)](#go-127-version-bump-risk-checklist-verify-before-bumping)
 - [Baseline and tooling priorities](#baseline-and-tooling-priorities)
 - [General Modernization (Any Version)](#general-modernization-any-version)
   - [Code MUST use `any` instead of `interface{}` _(Go 1.18+)_](#code-must-use-any-instead-of-interface-go-118)
@@ -395,10 +395,10 @@ s = handle.Value()
 
 With `go 1.23` or later in `go.mod`:
 
-- `time.Timer` and `time.Ticker` are garbage collected without calling `Stop()`
+- Unreferenced `time.Timer` and `time.Ticker` values are garbage collected without calling `Stop()`
 - Timer channels are now unbuffered (capacity 0, was 1)
 
-Remove unnecessary `Stop()` calls in defer patterns where the timer goes out of scope.
+Remove a `defer t.Stop()` only when it existed to free the timer as the function returns — nothing receives from `t.C` afterwards, so the GC now does that job. Keep `Stop()` where it changes behavior: it cancels a pending `AfterFunc` callback, which fires even when unreferenced, and it ends ticks that a still-running goroutine would otherwise keep receiving from `t.C`.
 
 ---
 
@@ -914,11 +914,11 @@ For modules with `go 1.27` or later in `go.mod`, `go mod tidy` consolidates dupl
 - `database/sql.ConvertAssign` and `driver.RowsColumnScanner`: for database driver authors.
 - `runtime/secret.Do`: goroutines started in secret mode now execute in secret mode themselves.
 
-### Go 1.27+ version-bump risk checklist (verify, don't rewrite)
+### Go 1.27+ version-bump risk checklist (verify before bumping)
 
-These changes need review before or during a bump to `go 1.27` — none of them require a code rewrite, but skipping the check risks a build failure or a silent behavior change:
+These changes need review before or during a bump to `go 1.27` — most only need verifying, but skipping the check risks a build failure or a silent behavior change:
 
-- **Removed `GODEBUG` settings** — `asynctimerchan`, `tlsunsafeekm`, `tlsrsakex`, `tls3des`, `tls10server`, `x509keypairleaf`, `gotypesalias`. A `godebug` line in `go.mod` or a `//go:debug` comment still pinning one of these to its old value now **fails the build**; pinning it to its current default value is accepted. Search with `grep -rn 'go:debug\|godebug' go.mod **/*.go`.
+- **Removed `GODEBUG` settings** — `asynctimerchan`, `tlsunsafeekm`, `tlsrsakex`, `tls3des`, `tls10server`, `x509keypairleaf`, `gotypesalias`. A `godebug` line in `go.mod` or a `//go:debug` comment still pinning one of these to its old value now **fails the build**; pinning it to its current default value is accepted. Dropping an old-value pin switches that code to the new behavior, so fix the code that depended on the old one — for `asynctimerchan=1`, code that expected a stale value in a timer channel after `Stop` or `Reset`. Search with `grep -rn 'go:debug\|godebug' go.mod **/*.go`.
 - **json/v2 default strictness** — see above; re-run integration tests against real-world payloads, not just unit tests, before the bump ships.
 - **Size-specialized allocator** — up to 30% faster allocations under 80 bytes, roughly 1% faster overall, at the cost of ~60 KB binary size. Enabled by default; disable with `GOEXPERIMENT=nosizespecializedmalloc` if binary size is constrained, but treat that flag as scheduled for removal in Go 1.28, not a long-term setting.
 - **Darwin floor raised to macOS 13 (Ventura)** — older macOS targets can no longer run binaries built with this toolchain.

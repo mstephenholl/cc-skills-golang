@@ -6,7 +6,7 @@ license: MIT
 compatibility: Designed for Claude Code, Codex or similar harness, and for projects using Golang.
 metadata:
   author: samber
-  version: "1.5.3"
+  version: "1.5.4"
   openclaw:
     emoji: "🔄"
     homepage: https://github.com/samber/cc-skills-golang
@@ -98,7 +98,7 @@ The `modernize` linter (available since **golangci-lint v2.6.0**) automatically 
 
 ## Go 1.27+ version-bump risk checklist
 
-Several Go 1.27 changes need **verification, not a rewrite**, before a `go.mod` bump ships. Most notably: a `godebug` line in `go.mod` (or `//go:debug` comment) still pinning `asynctimerchan`, `tlsunsafeekm`, `tlsrsakex`, `tls3des`, `tls10server`, `x509keypairleaf`, or `gotypesalias` to its **old** value now fails the build. Full checklist in [Go version modernizations](./references/versions.md#go-127-version-bump-risk-checklist-verify-dont-rewrite).
+Most Go 1.27 changes need **verification, not a rewrite**, before a `go.mod` bump ships. The exception: a `godebug` line in `go.mod` (or `//go:debug` comment) still pinning `asynctimerchan`, `tlsunsafeekm`, `tlsrsakex`, `tls3des`, `tls10server`, `x509keypairleaf`, or `gotypesalias` to its **old** value now fails the build, and dropping the pin switches that code to the new behavior — fix whatever depended on the old one. Full checklist in [Go version modernizations](./references/versions.md#go-127-version-bump-risk-checklist-verify-before-bumping).
 
 ## Migration Priority Guide
 

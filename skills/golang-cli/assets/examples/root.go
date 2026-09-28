@@ -13,25 +13,30 @@ import (
 
 var cfgFile string
 
-var rootCmd = &cobra.Command{
-	Use:   "myapp",
-	Short: "A brief description of your application",
-	Long:  "A longer description with usage examples.",
-	PersistentPreRunE: func(cmd *cobra.Command, args []string) error {
-		return initConfig()
-	},
-	SilenceUsage:  true, // don't print usage on errors from RunE
-	SilenceErrors: true, // handle error printing yourself
-}
+// newRootCmd builds the whole command tree. Tests call it once per case, because
+// cobra keeps parsed flag values on the command and a shared tree leaks them.
+func newRootCmd() *cobra.Command {
+	rootCmd := &cobra.Command{
+		Use:   "myapp",
+		Short: "A brief description of your application",
+		Long:  "A longer description with usage examples.",
+		PersistentPreRunE: func(cmd *cobra.Command, args []string) error {
+			return initConfig()
+		},
+		SilenceUsage:  true, // don't print usage on errors from RunE
+		SilenceErrors: true, // handle error printing yourself
+	}
 
-func Execute() error {
-	return rootCmd.Execute()
-}
-
-func init() {
 	rootCmd.PersistentFlags().StringVar(&cfgFile, "config", "", "config file (default $HOME/.myapp.yaml)")
 	rootCmd.PersistentFlags().String("log-level", "info", "log level (debug, info, warn, error)")
 	viper.BindPFlag("log-level", rootCmd.PersistentFlags().Lookup("log-level"))
+
+	rootCmd.AddCommand(newServeCmd(), newVersionCmd(), newCompletionCmd())
+	return rootCmd
+}
+
+func Execute() error {
+	return newRootCmd().Execute()
 }
 
 func initConfig() error {

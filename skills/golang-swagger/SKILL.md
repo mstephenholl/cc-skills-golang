@@ -6,7 +6,7 @@ license: MIT
 compatibility: Designed for Claude Code, Codex or similar harness. Requires go and swag CLI.
 metadata:
   author: samber
-  version: "1.1.5"
+  version: "1.1.6"
   openclaw:
     emoji: "📋"
     homepage: https://github.com/samber/cc-skills-golang
@@ -18,7 +18,7 @@ metadata:
       - kind: go
         package: github.com/swaggo/swag/cmd/swag@latest
         bins: [swag]
-    skill-library-version: "2.0.0-rc5"
+    skill-library-version: "1.16.6"
 allowed-tools: Read Edit Write Glob Grep Bash(go:*) Bash(golangci-lint:*) Bash(git:*) Agent WebFetch mcp__context7__resolve-library-id mcp__context7__query-docs Bash(swag:*) AskUserQuestion Bash(godig:*) Bash(gopls:*) LSP mcp__gopls__*
 paths:
   - "**/*.go"

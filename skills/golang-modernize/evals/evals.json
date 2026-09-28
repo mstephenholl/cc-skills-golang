@@ -158,13 +158,13 @@
       "id": 12,
       "name": "timer-gc-greenteagc",
       "prompt": "We upgraded to Go 1.26. Review this code for things we can clean up.\n\n```go\n// go.mod\nmodule example.com/scheduler\ngo 1.26\n\n// scheduler.go\npackage scheduler\n\nimport (\n    \"os\"\n    \"runtime/debug\"\n    \"time\"\n)\n\nfunc init() {\n    // Tune GC for lower latency\n    debug.SetGCPercent(50)\n    debug.SetMemoryLimit(2 << 30) // 2GB\n    os.Setenv(\"GOGC\", \"50\")\n}\n\nfunc RunAfter(d time.Duration, fn func()) {\n    timer := time.NewTimer(d)\n    defer timer.Stop() // prevent timer leak\n    <-timer.C\n    fn()\n}\n\nfunc PeriodicTask(interval time.Duration, fn func()) chan struct{} {\n    done := make(chan struct{})\n    go func() {\n        ticker := time.NewTicker(interval)\n        defer ticker.Stop() // prevent ticker leak\n        for {\n            select {\n            case <-ticker.C:\n                fn()\n            case <-done:\n                return\n            }\n        }\n    }()\n    return done\n}\n\nfunc Debounce(d time.Duration, fn func()) func() {\n    var timer *time.Timer\n    return func() {\n        if timer != nil {\n            timer.Stop()\n        }\n        timer = time.AfterFunc(d, fn)\n    }\n}\n\nfunc Timeout(d time.Duration) <-chan time.Time {\n    timer := time.NewTimer(d)\n    defer timer.Stop()\n    return timer.C\n}\n```\n\nSuggest all modernization opportunities.",
-      "trap": "Go 1.23+ timers/tickers are GC'd without Stop(). The Stop() in PeriodicTask is still needed for correctness. Go 1.26's Green Tea GC (10-40% overhead reduction) may make manual tuning unnecessary. go fix ./... is available in Go 1.26.",
+      "trap": "Go 1.23+ timers/tickers are GC'd without Stop(), so the deferred Stop() in RunAfter and PeriodicTask only helped the GC (the one in Timeout even stops the timer before the caller can receive from the returned channel). The Stop() in Debounce is still needed for correctness — it cancels the pending AfterFunc callback, which fires even when unreferenced. Go 1.26's Green Tea GC (10-40% overhead reduction) may make manual tuning unnecessary. go fix ./... is available in Go 1.26.",
       "assertions": [
         { "id": "12.1", "text": "Identifies that some defer timer.Stop() calls are unnecessary with Go 1.23+" },
         { "id": "12.2", "text": "Explains the timer/ticker GC behavior change (collected without Stop)" },
         { "id": "12.3", "text": "Suggests reviewing GC tuning (SetGCPercent/SetMemoryLimit) due to Green Tea GC" },
         { "id": "12.4", "text": "Mentions Green Tea GC's 10-40% overhead reduction" },
-        { "id": "12.5", "text": "Does NOT suggest removing Stop() from PeriodicTask ticker (needed for correctness)" },
+        { "id": "12.5", "text": "Does NOT suggest removing timer.Stop() from Debounce (needed for correctness — it cancels the pending AfterFunc callback)" },
         { "id": "12.6", "text": "Suggests go fix ./... for automated modernization (Go 1.26)" },
         { "id": "12.7", "text": "Correctly distinguishes between Stop for GC (removable) and Stop for correctness (keep)" }
       ]
@@ -224,10 +224,10 @@
     {
       "id": 17,
       "name": "godebug-removed-key-build-break",
-      "prompt": "Upgrade this project to the latest stable Go toolchain and update `go.mod` accordingly.\n\n```\nmodule example.com/svc\n\ngo 1.24\n\ngodebug (\n    asynctimerchan=0\n)\n\nrequire (\n    github.com/lib/pq v1.10.9\n)\n```\n\nThe `asynctimerchan=0` line was added a while ago to keep `time.Timer`/`time.Ticker` channels buffered like they were before Go 1.23, because some code relied on a stale timer value still sitting in the channel. Provide the updated `go.mod`.",
+      "prompt": "Upgrade this project to the latest stable Go toolchain and update `go.mod` accordingly.\n\n```\nmodule example.com/svc\n\ngo 1.24\n\ngodebug (\n    asynctimerchan=1\n)\n\nrequire (\n    github.com/lib/pq v1.10.9\n)\n```\n\nThe `asynctimerchan=1` line was added a while ago to keep `time.Timer`/`time.Ticker` channels buffered like they were before Go 1.23, because some code relied on a stale timer value still sitting in the channel. Provide the updated `go.mod`.",
       "trap": "Go 1.27 removed the asynctimerchan GODEBUG setting entirely; a go.mod godebug entry still pinning it to its old (pre-1.23) value now fails the build, not just prints a warning. The natural default without the skill is to bump only the go directive and leave the godebug block untouched, assuming an old GODEBUG pin is harmless leftover config.",
       "assertions": [
-        { "id": "17.1", "text": "Removes or updates the asynctimerchan=0 godebug entry rather than leaving it as-is" },
+        { "id": "17.1", "text": "Removes or updates the asynctimerchan=1 godebug entry rather than leaving it as-is" },
         { "id": "17.2", "text": "Explains that Go 1.27 removed this GODEBUG setting and that a go.mod entry pinned to the old value now fails the build (not just a warning)" },
         { "id": "17.3", "text": "Bumps the go directive to a current Go 1.27-era version" },
         { "id": "17.4", "text": "Recommends actually fixing the underlying code that relied on buffered timer channels rather than just deleting the compatibility shim silently" },

@@ -168,25 +168,25 @@
   {
     "id": 7,
     "name": "viper-key-case-insensitivity",
-    "description": "Tests understanding that viper keys are always lowercased internally",
-    "prompt": "I'm calling viper.GetString('DATABASE_HOST') in my Go service to read a config key. The config file has 'database_host: localhost' but I get an empty string. What's wrong?",
-    "trap": "Without the skill, the model may suggest checking env binding or config format. Viper lowercases all keys internally — 'DATABASE_HOST' is stored as 'database_host', but the lookup 'DATABASE_HOST' is also lowercased to 'database_host', so it should match. However, this highlights the convention: always use lowercase keys in viper calls.",
+    "description": "Tests understanding that viper lowercases keys, so a camelCase key maps to an env var name with no underscore between its words",
+    "prompt": "My Go service reads config.yaml with viper; it has a 'database' section containing 'maxConn: 10', and I read it with viper.GetInt('database.maxConn'). At startup I call SetEnvPrefix('MYAPP'), SetEnvKeyReplacer(strings.NewReplacer('.', '_')) and AutomaticEnv(). In production we set MYAPP_DATABASE_MAX_CONN=50, but the service still gets 10. What's wrong?",
+    "trap": "Without the skill, the model may blame the replacer, the prefix or the precedence order, or assume viper splits camelCase into words. Viper lowercases keys — 'database.maxConn' is 'database.maxconn' — and builds the env name by prefixing, uppercasing and then applying the replacer, so it looks up MYAPP_DATABASE_MAXCONN and never MYAPP_DATABASE_MAX_CONN.",
     "assertions": [
       {
         "id": "7.1",
-        "text": "Explains that viper normalizes all keys to lowercase internally"
+        "text": "Explains that viper lowercases keys, so 'database.maxConn' becomes 'database.maxconn' and the camelCase word boundary is lost"
       },
       {
         "id": "7.2",
-        "text": "Recommends using lowercase keys consistently in viper.Get* calls"
+        "text": "Identifies that viper derives the env name by prefixing, uppercasing and applying the replacer, so it looks up MYAPP_DATABASE_MAXCONN, not MYAPP_DATABASE_MAX_CONN"
       },
       {
         "id": "7.3",
-        "text": "Identifies that viper.GetString(\"database_host\") is the correct form"
+        "text": "Fixes it by renaming the key to snake_case ('database.max_conn', with a matching mapstructure tag) or by binding explicitly with viper.BindEnv(\"database.maxConn\", \"MYAPP_DATABASE_MAX_CONN\")"
       },
       {
         "id": "7.4",
-        "text": "Notes that while viper.GetString(\"DATABASE_HOST\") also works (due to lowercasing), using uppercase keys is a source of confusion"
+        "text": "Does NOT blame the replacer or the precedence order — the replacer is present and env already outranks the config file"
       }
     ]
   },

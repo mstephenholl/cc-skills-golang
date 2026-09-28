@@ -513,7 +513,7 @@
     "assertions": [
       {"id": "37.1", "text": "Identifies that time.After creates a new timer on every loop iteration"},
       {"id": "37.2", "text": "Explains this causes allocation churn and was a leak-like pattern on older Go versions before Go 1.23 timer GC improvements"},
-      {"id": "37.3", "text": "Recommends using time.NewTimer with Reset() or time.NewTicker instead"},
+      {"id": "37.3", "text": "Recommends a single time.NewTimer that is Reset after each message — not time.NewTicker, whose fixed schedule would end the loop while messages are still arriving"},
       {"id": "37.4", "text": "Shows the correct pattern with a reusable timer and defer timer.Stop()"},
       {"id": "37.5", "text": "Does NOT suggest heap profiling as the first diagnostic step for this known pattern"}
     ]

@@ -298,7 +298,7 @@
       },
       {
         "id": "11.4",
-        "text": "Notes that gci and goimports are redundant with gofumpt and can be disabled"
+        "text": "Notes that gofmt is redundant with gofumpt, but keeps goimports enabled alongside it — gofumpt only formats and groups imports, it never adds missing ones or removes unused ones"
       }
     ]
   }

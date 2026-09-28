@@ -60,9 +60,9 @@
 
 **go-sql-driver/mysql** (<https://github.com/go-sql-driver/mysql>) MySQL driver for Go's database/sql package. Maintained by the Go team, reliable and performant.
 
-**lib/pq** (<https://github.com/lib/pq>) Pure Go PostgreSQL driver. The gold standard for PostgreSQL in Go.
+**pgx** (<https://github.com/jackc/pgx>) PostgreSQL driver and toolkit — the default pick for PostgreSQL. Faster than lib/pq, supports all PostgreSQL types, and offers a native interface (`COPY`, `LISTEN`/`NOTIFY`, batching, `pgxpool`) plus a `database/sql` adapter (`pgx/v5/stdlib`) for libraries that need one.
 
-**pgx** (<https://github.com/jackc/pgx>) PostgreSQL driver with advanced features. Faster than lib/pq, supports all PostgreSQL types.
+**lib/pq** (<https://github.com/lib/pq>) Pure Go PostgreSQL driver for `database/sql` only. Fine to keep where a codebase already uses it; pick pgx for new code, which gets the native interface and the speed above.
 
 **redis-go** (<https://github.com/redis/go-redis>) Redis client for Go. Cluster support, modern Redis features, well-maintained.
 

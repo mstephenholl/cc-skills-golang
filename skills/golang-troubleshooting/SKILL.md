@@ -6,7 +6,7 @@ license: MIT
 compatibility: Designed for Claude Code, Codex or similar harness, and for projects using Golang.
 metadata:
   author: samber
-  version: "1.3.4"
+  version: "1.3.5"
   openclaw:
     emoji: "🔍"
     homepage: https://github.com/samber/cc-skills-golang
@@ -80,7 +80,7 @@ WHAT ARE YOU SEEING?
   → See [performance-debug.md](./references/performance-debug.md), [pprof.md](./references/pprof.md)
 
 "Memory growing over time"
-  → pprof heap profiling
+  → goroutine count first (leaked stacks never show in a heap profile), then diff heap profiles with -base
   → See [performance-debug.md](./references/performance-debug.md), [concurrency-debug.md](./references/concurrency-debug.md)
 
 "Slow / high latency / p99 spikes"

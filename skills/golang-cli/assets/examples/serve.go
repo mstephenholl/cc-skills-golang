@@ -8,24 +8,24 @@ import (
 	"github.com/spf13/viper"
 )
 
-var serveCmd = &cobra.Command{
-	Use:   "serve",
-	Short: "Start the HTTP server",
-	RunE: func(cmd *cobra.Command, args []string) error {
-		port := viper.GetInt("port")
-		fmt.Fprintf(cmd.OutOrStdout(), "listening on :%d\n", port)
-		// start server...
-		return nil
-	},
-}
+func newServeCmd() *cobra.Command {
+	serveCmd := &cobra.Command{
+		Use:   "serve",
+		Short: "Start the HTTP server",
+		RunE: func(cmd *cobra.Command, args []string) error {
+			port := viper.GetInt("port")
+			fmt.Fprintf(cmd.OutOrStdout(), "listening on :%d\n", port)
+			// start server...
+			return nil
+		},
+	}
 
-func init() {
-	rootCmd.AddCommand(serveCmd)
 	serveCmd.Flags().IntP("port", "p", 8080, "port to listen on")
-	viper.BindPFlag("port", serveCmd.Flags().Lookup("port"))
+	viper.BindPFlag("port", serveCmd.Flags().Lookup("port")) // rebinds viper's global to this tree's flag
+	return serveCmd
 }
 
 // For command groups, use AddGroup and set GroupID on commands:
 //
 //   rootCmd.AddGroup(&cobra.Group{ID: "management", Title: "Management Commands:"})
-//   serveCmd.GroupID = "management"
+//   serveCmd.GroupID = "management" // in newServeCmd, before returning it

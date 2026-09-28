@@ -7,27 +7,28 @@ import (
 // === Shell Completion Command ===
 // Cobra generates completions for bash, zsh, fish, and PowerShell automatically.
 
-func init() {
-	rootCmd.AddCommand(&cobra.Command{
+func newCompletionCmd() *cobra.Command {
+	return &cobra.Command{
 		Use:       "completion [bash|zsh|fish|powershell]",
 		Short:     "Generate shell completion script",
 		Args:      cobra.MatchAll(cobra.ExactArgs(1), cobra.OnlyValidArgs),
 		ValidArgs: []string{"bash", "zsh", "fish", "powershell"},
 		RunE: func(cmd *cobra.Command, args []string) error {
+			root := cmd.Root()       // the tree this command was added to, not a package-level global
 			out := cmd.OutOrStdout() // tests capture it with SetOut; os.Stdout can't be redirected
 			switch args[0] {
 			case "bash":
-				return rootCmd.GenBashCompletionV2(out, true)
+				return root.GenBashCompletionV2(out, true)
 			case "zsh":
-				return rootCmd.GenZshCompletion(out)
+				return root.GenZshCompletion(out)
 			case "fish":
-				return rootCmd.GenFishCompletion(out, true)
+				return root.GenFishCompletion(out, true)
 			case "powershell":
-				return rootCmd.GenPowerShellCompletionWithDesc(out)
+				return root.GenPowerShellCompletionWithDesc(out)
 			}
 			return nil
 		},
-	})
+	}
 }
 
 // === Custom Completions ===

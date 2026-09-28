@@ -26,47 +26,86 @@ Layer 4: DATA     — Encryption at rest/transit, access controls, backups
 
 ### Go Implementation by Layer
 
-**Layer 1 — Rate Limiting Middleware:**
+**Layer 1 — Rate Limiting Middleware:** limit per client, not globally — one shared `rate.Limiter` lets a single abusive client drain the budget and lock every other client out.
 
 ```go
-import "golang.org/x/time/rate"
+import (
+    "context"
+    "net"
+    "net/http"
+    "sync"
+    "time"
 
-// Global rate limiter
-func RateLimitMiddleware(rps float64, burst int) func(http.Handler) http.Handler {
-    limiter := rate.NewLimiter(rate.Limit(rps), burst)
-    return func(next http.Handler) http.Handler {
-        return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-            if !limiter.Allow() {
-                http.Error(w, "Too Many Requests", http.StatusTooManyRequests)
-                return
-            }
-            next.ServeHTTP(w, r)
-        })
-    }
+    "golang.org/x/time/rate"
+)
+
+type clientLimiter struct {
+    limiter  *rate.Limiter
+    lastSeen time.Time
 }
-```
 
-**Per-client rate limiting** prevents a single abuser from exhausting the global limit:
-
-```go
-type ClientRateLimiter struct {
+type RateLimiter struct {
     mu      sync.Mutex
-    clients map[string]*rate.Limiter
+    clients map[string]*clientLimiter
     rps     rate.Limit
     burst   int
 }
 
-func (crl *ClientRateLimiter) GetLimiter(clientIP string) *rate.Limiter {
-    crl.mu.Lock()
-    defer crl.mu.Unlock()
-    if limiter, exists := crl.clients[clientIP]; exists {
-        return limiter
+func NewRateLimiter(ctx context.Context, rps float64, burst int, idleTTL time.Duration) *RateLimiter {
+    rl := &RateLimiter{clients: make(map[string]*clientLimiter), rps: rate.Limit(rps), burst: burst}
+    go rl.evictIdle(ctx, idleTTL) // without eviction, clients rotating IPs grow the map until OOM
+    return rl
+}
+
+func (rl *RateLimiter) limiter(key string) *rate.Limiter {
+    rl.mu.Lock()
+    defer rl.mu.Unlock()
+    c, ok := rl.clients[key]
+    if !ok {
+        c = &clientLimiter{limiter: rate.NewLimiter(rl.rps, rl.burst)}
+        rl.clients[key] = c
     }
-    limiter := rate.NewLimiter(crl.rps, crl.burst)
-    crl.clients[clientIP] = limiter
-    return limiter
+    c.lastSeen = time.Now()
+    return c.limiter
+}
+
+func (rl *RateLimiter) evictIdle(ctx context.Context, ttl time.Duration) {
+    ticker := time.NewTicker(ttl)
+    defer ticker.Stop()
+    for {
+        select {
+        case <-ctx.Done():
+            return
+        case <-ticker.C:
+            rl.mu.Lock()
+            for key, c := range rl.clients {
+                if time.Since(c.lastSeen) > ttl {
+                    delete(rl.clients, key)
+                }
+            }
+            rl.mu.Unlock()
+        }
+    }
+}
+
+func (rl *RateLimiter) Middleware(next http.Handler) http.Handler {
+    return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+        // Key on the peer address or the authenticated user ID — X-Forwarded-For is
+        // client-controlled unless a trusted proxy sets it.
+        key, _, err := net.SplitHostPort(r.RemoteAddr)
+        if err != nil {
+            key = r.RemoteAddr
+        }
+        if !rl.limiter(key).Allow() {
+            http.Error(w, "Too Many Requests", http.StatusTooManyRequests)
+            return
+        }
+        next.ServeHTTP(w, r)
+    })
 }
 ```
+
+Key IPv6 clients on their /64 prefix, since one subscriber usually controls the whole block. The map is per process, so N replicas allow N times the limit — enforce a shared limit in a shared store (e.g. Redis) or at the gateway when that matters.
 
 **Layer 2 — mTLS for Service-to-Service:**
 

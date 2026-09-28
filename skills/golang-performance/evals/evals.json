@@ -146,12 +146,12 @@
     "name": "sync-pool-rules",
     "description": "Tests proper sync.Pool usage: reset before Put, return copies not pooled buffers, size limits",
     "prompt": "Review this sync.Pool usage in our Go HTTP handler for correctness:\n\n```go\nvar bufPool = sync.Pool{\n    New: func() any { return make([]byte, 0, 64*1024) },\n}\n\nfunc HandleRequest(w http.ResponseWriter, r *http.Request) {\n    buf := bufPool.Get().([]byte)\n    // ... fill buf with response data ...\n    buf = append(buf[:0], responseData...)\n    w.Write(buf)\n    bufPool.Put(buf)\n}\n\nfunc HandleLargeUpload(w http.ResponseWriter, r *http.Request) {\n    buf := bufPool.Get().([]byte)\n    data, _ := io.ReadAll(r.Body) // could be 100MB+\n    buf = append(buf[:0], data...)\n    processData(buf)\n    bufPool.Put(buf)\n}\n```\n\nIdentify all issues with this pool usage.",
-    "trap": "Multiple issues: (1) HandleRequest returns the pooled buffer directly via w.Write — the caller (net/http) may retain it after Put, (2) HandleLargeUpload puts enormous buffers (100MB+) back into the pool — don't pool objects >32KB, (3) the pool stores []byte values not pointers, which causes an allocation on Get. The skill covers all these rules.",
+    "trap": "Multiple issues: (1) the buffer goes back to the pool right after processData(buf), so any reference processData keeps aliases memory the next Get hands to another request — it must copy what it keeps (w.Write(buf) before Put is safe, since io.Writer implementations must not retain p), (2) HandleLargeUpload puts enormous buffers (100MB+) back into the pool — don't pool objects >32KB, (3) the pool stores []byte values not pointers, so every Put allocates to box the slice header into an interface. The skill covers all these rules.",
     "assertions": [
       {"id": "12.1", "text": "Identifies that HandleLargeUpload puts oversized buffers (100MB+) back into the pool"},
       {"id": "12.2", "text": "Mentions the 32KB guideline — don't pool objects larger than ~32KB"},
-      {"id": "12.3", "text": "Identifies that w.Write(buf) may retain the buffer after bufPool.Put(buf) in the same function"},
-      {"id": "12.4", "text": "Suggests pooling pointers (*[]byte) instead of values to avoid allocation on Get"},
+      {"id": "12.3", "text": "Treats w.Write(buf) before bufPool.Put(buf) as safe, since io.Writer implementations must not retain p, and requires any code that keeps the data past Put — e.g. processData storing buf — to copy what it needs"},
+      {"id": "12.4", "text": "Suggests pooling pointers (*[]byte) instead of values — storing a slice value in the pool allocates on every Put"},
       {"id": "12.5", "text": "Recommends resetting/clearing state before Put to avoid retaining large object graphs"}
     ]
   },

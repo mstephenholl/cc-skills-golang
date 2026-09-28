@@ -38,15 +38,16 @@ func TestServeCommand(t *testing.T) {
 			want: "listening on :9090\n",
 		},
 		{
-			name:    "missing required flag",
-			args:    []string{"serve", "--host", ""},
+			name:    "invalid port value",
+			args:    []string{"serve", "--port", "not-a-number"},
 			wantErr: true,
 		},
 	}
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			got, err := executeCommand(rootCmd, tt.args...)
+			// A fresh tree per case — a shared root keeps "--port 9090" from the previous case.
+			got, err := executeCommand(newRootCmd(), tt.args...)
 			if (err != nil) != tt.wantErr {
 				t.Errorf("error = %v, wantErr %v", err, tt.wantErr)
 			}

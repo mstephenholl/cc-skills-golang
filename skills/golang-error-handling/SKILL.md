@@ -6,7 +6,7 @@ license: MIT
 compatibility: Designed for Claude Code, Codex or similar harness, and for projects using Golang.
 metadata:
   author: samber
-  version: "1.3.3"
+  version: "1.3.4"
   openclaw:
     emoji: "⚠"
     homepage: https://github.com/samber/cc-skills-golang
@@ -46,7 +46,7 @@ paths:
 9. **Use `samber/oops`** for production errors needing stack traces, user/tenant context, or structured attributes.
 10. **Log HTTP requests** with structured middleware capturing method, path, status, and duration.
 11. **Never expose technical errors to users** — translate internal errors to user-friendly messages, log technical details separately.
-12. **Keep log grouping low-cardinality** — at logging/APM boundaries, keep message templates stable and attach IDs, paths, line numbers, and counts as structured attributes. Error values may include useful operational context, but avoid putting high-cardinality data into the stable log message used for grouping.
+12. **Keep log grouping low-cardinality** — APM and log tools group events by the log message or the error text, so keep both stable: add context through static wrapping prefixes, and attach IDs, paths, line numbers, and counts as structured attributes (slog key-values or `samber/oops`) instead of interpolating them into the error string.
 
 ## Detailed Reference
 

@@ -400,20 +400,22 @@ Similar to `list` but searches all functions matching a pattern and shows their 
 Narrow the analysis to specific functions or exclude noise. These are stateful — they persist across commands until explicitly cleared:
 
 ```
-(pprof) focus=myapp            # only show call paths that pass through "myapp"
-(pprof) ignore=runtime         # remove runtime functions from display
-(pprof) hide=testing           # hide testing framework noise from graphs
-(pprof) show=handler           # only show functions matching "handler"
+(pprof) focus=myapp            # keep only samples whose stack passes through "myapp"
+(pprof) ignore=gcBgMarkWorker  # drop every sample whose stack passes through a match
+(pprof) hide=testing           # remove testing frames; their samples stay
+(pprof) show=handler           # keep only frames matching "handler"
 (pprof) tagfocus=endpoint=/users  # only show samples with this tag value
 (pprof) tagignore=request_type=batch  # exclude samples with this tag value
 ```
 
-**Difference between `focus`, `show`, `hide`, and `ignore`:**
+**Difference between `focus`, `show`, `hide`, and `ignore`** — `focus` and `ignore` choose which samples survive; `hide` and `show` choose which frames survive, and a removed frame's cost moves to a remaining frame instead of vanishing:
 
-- `focus` — keeps only paths that contain a matching function; everything else is dropped
-- `ignore` — removes matching functions from the graph entirely; their costs are attributed to callers
-- `show` — like `focus` but only affects display, not cost accounting
-- `hide` — like `ignore` but only hides from display, not cost accounting
+- `focus` — keeps only samples whose stack contains a matching function; everything else is dropped
+- `ignore` — drops every sample whose stack contains a matching function, so its callers lose that cost too — nothing is re-attributed, and `ignore=runtime` discards most of the profile, since most Go stacks contain a runtime frame (`runtime.main`, `runtime.mallocgc`, scheduler or GC work)
+- `hide` — removes matching frames but keeps their samples, so a hidden function's flat cost moves to its caller — `hide=runtime` charges runtime work to the application code that triggered it
+- `show` — the inverse of `hide`: keeps only matching frames, moves the rest's flat cost onto them, and drops samples with no match
+
+Percentages stay relative to the unfiltered total unless you add `-relative_percentages`.
 
 **Clear all filters:**
 
@@ -558,16 +560,16 @@ go tool pprof -weblist=serializeResponse cpu.prof
 **Filtering flags** — narrow analysis to relevant functions:
 
 ```bash
-# Focus: keep only call paths passing through matching functions
+# Focus: keep only samples whose stack passes through a matching function
 go tool pprof -focus=myapp/pkg/handler -top cpu.prof
 
-# Ignore: remove matching functions — their cost is attributed to callers
-go tool pprof -ignore=runtime -top cpu.prof
+# Ignore: drop every sample whose stack passes through a match — callers lose that cost too
+go tool pprof -ignore=gcBgMarkWorker -top cpu.prof
 
-# Show: display only matching functions (display-only, does not change cost accounting)
+# Show: keep only matching frames — other frames' flat cost moves onto them; samples with no match are dropped
 go tool pprof -show=handler -top cpu.prof
 
-# Hide: hide matching functions from display (does not change cost accounting)
+# Hide: remove matching frames but keep their samples — a hidden frame's flat cost moves to its caller
 go tool pprof -hide=testing -svg cpu.prof > clean.svg
 
 # Show_from: trim all frames above the first match — hides framework/routing callers
@@ -577,7 +579,7 @@ go tool pprof -show_from=handler.Handle -top cpu.prof
 go tool pprof -noinlines -top cpu.prof
 
 # Combine multiple filters
-go tool pprof -cum -top -nodecount=10 -focus=handler -ignore=runtime cpu.prof
+go tool pprof -cum -top -nodecount=10 -focus=handler -hide=runtime cpu.prof
 ```
 
 **Tag-based filtering** — for profiles with labels (via `pprof.Do()`):

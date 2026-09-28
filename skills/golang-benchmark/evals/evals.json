@@ -1006,15 +1006,15 @@
       },
       {
         "id": "37.2",
-        "text": "Explains that ignore removes matching functions entirely, attributing their costs to callers"
+        "text": "Explains that ignore drops every sample whose stack contains a matching function, so callers lose that cost too — nothing is re-attributed"
       },
       {
         "id": "37.3",
-        "text": "Explains that show is like focus but only affects display, not cost accounting"
+        "text": "Explains that show keeps only matching frames, moving the other frames' flat cost onto them, and drops samples with no match"
       },
       {
         "id": "37.4",
-        "text": "Explains that hide is like ignore but only hides from display, not cost accounting"
+        "text": "Explains that hide removes matching frames but keeps their samples, so a hidden function's flat cost moves to its caller"
       },
       { "id": "37.5", "text": "Mentions `reset` to clear all filters" }
     ]
@@ -1127,8 +1127,8 @@
     "id": 42,
     "name": "noinlines-inlined-function-attribution",
     "description": "Tests that noinlines aggregates inlined function costs to the outer non-inlined caller",
-    "prompt": "My pprof call graph is cluttered. A single hot function has been inlined into 6 different callers, so its cost is split across 6 separate nodes in the graph. I want to see the aggregated cost in one place. What pprof option should I use?",
-    "trap": "Without the skill, the model suggests using show/hide filters or focus (which change display but not cost aggregation) or ignoring inlined nodes — missing the noinlines option which correctly attributes inlined function costs to their first out-of-line caller",
+    "prompt": "My pprof top list and call graph are cluttered with small helpers marked (inline), each carrying a sliver of flat time, so the ranking doesn't show what the functions the compiler actually emitted really cost. I want each inlined helper's cost counted in the function it was inlined into. What pprof option should I use?",
+    "trap": "Without the skill, the model suggests rebuilding with -gcflags=-l (which changes the code being measured) or listing the helpers in a hide regex (which removes frames by name, inlined or not) — missing the noinlines option, which attributes every inlined frame's cost to its first out-of-line caller at analysis time",
     "assertions": [
       {
         "id": "42.1",
@@ -1144,7 +1144,7 @@
       },
       {
         "id": "42.4",
-        "text": "Distinguishes noinlines from hide/ignore: hide/ignore only affect display without changing cost attribution"
+        "text": "Distinguishes noinlines from hide/ignore: ignore drops whole samples and hide removes frames by name whether inlined or not, while noinlines folds every inlined frame into its out-of-line caller"
       }
     ]
   },
