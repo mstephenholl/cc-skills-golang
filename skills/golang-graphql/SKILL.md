@@ -1,12 +1,12 @@
 ---
 name: golang-graphql
-description: "Implements GraphQL APIs in Golang using gqlgen or graphql-go. Apply when building GraphQL servers, designing schemas, writing resolvers, handling subscriptions, or integrating GraphQL with existing Go HTTP services. Also apply when the codebase imports `github.com/99designs/gqlgen` or `github.com/graph-gophers/graphql-go`."
+description: "GraphQL APIs in Golang with gqlgen or graphql-go — schema design, resolvers, DataLoaders against N+1, subscriptions, and query complexity limits. Apply when building or reviewing a Go GraphQL server, or when the codebase imports `github.com/99designs/gqlgen` or `github.com/graph-gophers/graphql-go`."
 user-invocable: false
 license: MIT
 compatibility: Designed for Claude Code, Codex or similar harness, and for projects using Golang.
 metadata:
   author: samber
-  version: "0.2.3"
+  version: "0.2.4"
   openclaw:
     emoji: "🔮"
     homepage: https://github.com/samber/cc-skills-golang

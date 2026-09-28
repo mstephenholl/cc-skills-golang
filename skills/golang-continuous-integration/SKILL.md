@@ -1,12 +1,12 @@
 ---
 name: golang-continuous-integration
-description: "GitHub Actions CI/CD pipeline configuration for Golang projects — workflow files for test, lint, SAST, coverage and vulnerability-scan jobs, Dependabot and Renovate config files, GoReleaser release pipelines, Docker build/push, repository security settings, and AI-driven PR review. Use when setting up or improving Go project CI, writing or fixing `.github/workflows/*.yml`, adding a linter or security scanner as a pipeline job, wiring automated dependency-update bots, or adding quality gates. Covers wiring tools into a pipeline, not the analysis they perform: do NOT use for choosing or interpreting security findings (→ See `samber/cc-skills-golang@golang-security` skill) or for choosing, upgrading, or auditing dependency versions (→ See `samber/cc-skills-golang@golang-dependency-management` skill)."
+description: "GitHub Actions CI/CD for Golang projects — test, lint, coverage and security-scan jobs, Dependabot and Renovate config, and GoReleaser releases. Use when writing or fixing `.github/workflows/*.yml`, adding a quality gate or scanner job, or automating releases. Covers wiring tools into a pipeline, not their analysis — not for interpreting security findings (→ See `samber/cc-skills-golang@golang-security` skill) or choosing dependency versions (→ See `samber/cc-skills-golang@golang-dependency-management` skill)."
 user-invocable: true
 license: MIT
 compatibility: Designed for Claude Code, Codex or similar harness, and for projects using Golang.
 metadata:
   author: samber
-  version: "1.4.2"
+  version: "1.4.3"
   openclaw:
     emoji: "🚀"
     homepage: https://github.com/samber/cc-skills-golang

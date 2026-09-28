@@ -1,12 +1,12 @@
 ---
 name: golang-database
-description: "Comprehensive guide for Go database access — parameterized queries, struct scanning, NULLable columns, transactions, isolation levels, SELECT FOR UPDATE, connection pool, batch processing, context propagation, and migration tooling. Use when writing, reviewing, or debugging Golang code that interacts with PostgreSQL, MariaDB, MySQL, or SQLite; for database testing; or for questions about database/sql, sqlx, or pgx. Does NOT generate database schemas or migration SQL."
+description: "Golang database access with database/sql, sqlx, and pgx — parameterized queries, NULLable columns, transactions and isolation levels, connection pools, and batch processing. Use when writing or reviewing Go queries, transactions, or row scanning against PostgreSQL, MySQL, MariaDB, or SQLite, or when debugging leaked connections or rows. Does not write schemas or migration SQL."
 user-invocable: true
 license: MIT
 compatibility: Designed for Claude Code, Codex or similar harness, and for projects using Golang.
 metadata:
   author: samber
-  version: "1.3.2"
+  version: "1.3.3"
   openclaw:
     emoji: "🗄"
     homepage: https://github.com/samber/cc-skills-golang

@@ -1,12 +1,12 @@
 ---
 name: golang-safety
-description: "Defensive Golang coding against accidental bugs — nil panics, typed-nil interfaces, `append` backing-array aliasing, silent int64-to-int32 truncation, float `==` comparison, `defer` inside loops, defensive copies of slices and maps, and usable zero values. Use when a Go program panics on a nil map write or nil pointer dereference, when reviewing code for nil-safety, numeric conversion overflow, or resource lifecycle, or when designing a type whose zero value must be safe. Not for designing concurrent access with goroutines, channels, or sync primitives (→ See `samber/cc-skills-golang@golang-concurrency` skill), not for exploitable vulnerabilities such as injection, weak crypto, or leaked secrets (→ See `samber/cc-skills-golang@golang-security` skill), and not for debugging an already-failing program (→ See `samber/cc-skills-golang@golang-troubleshooting` skill)."
+description: "Defensive Golang coding against accidental bugs — nil maps and pointers, typed-nil interfaces, append aliasing, integer truncation, float comparison, defer in loops, and safe zero values. Use when a Go program panics on nil, when reviewing code for nil-safety or numeric conversions, or when designing a type whose zero value must work. Not for concurrency design (→ See `samber/cc-skills-golang@golang-concurrency` skill) or exploitable vulnerabilities (→ See `samber/cc-skills-golang@golang-security` skill)."
 user-invocable: true
 license: MIT
 compatibility: Designed for Claude Code, Codex or similar harness, and for projects using Golang.
 metadata:
   author: samber
-  version: "1.3.2"
+  version: "1.3.3"
   openclaw:
     emoji: "🛡"
     homepage: https://github.com/samber/cc-skills-golang

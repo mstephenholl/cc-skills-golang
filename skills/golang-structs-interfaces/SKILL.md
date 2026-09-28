@@ -1,12 +1,12 @@
 ---
 name: golang-structs-interfaces
-description: 'Golang struct and interface design patterns — composition, embedding, type assertions, type switches, interface segregation, dependency injection via interfaces, struct field tags, and pointer vs value receivers. Use this skill when designing Go types, defining or implementing interfaces, embedding structs or interfaces, writing type assertions or type switches, adding struct field tags for JSON/YAML/DB serialization, or choosing between pointer and value receivers. Also use when the user asks about "accept interfaces, return structs", compile-time interface checks, or composing small interfaces into larger ones.'
+description: "Golang struct and interface design — interface size and placement, embedding vs named fields, pointer vs value receivers, type assertions and switches, and struct tags (omitempty/omitzero). Use when deciding where an interface belongs or how small it should be, choosing receivers, embedding, or debugging serialization tags. Not for package or service architecture (→ See `samber/cc-skills-golang@golang-design-patterns` skill)."
 user-invocable: true
 license: MIT
 compatibility: Designed for Claude Code, Codex or similar harness, and for projects using Golang.
 metadata:
   author: samber
-  version: "1.2.1"
+  version: "1.2.2"
   openclaw:
     emoji: "🧩"
     homepage: https://github.com/samber/cc-skills-golang

@@ -1,12 +1,12 @@
 ---
 name: golang-samber-slog
-description: "Structured logging extensions for Golang using samber/slog-**** packages — multi-handler pipelines (slog-multi), log sampling (slog-sampling), attribute formatting (slog-formatter), HTTP middleware (slog-fiber, slog-gin, slog-chi, slog-echo), and backend routing (slog-datadog, slog-sentry, slog-loki, slog-syslog, slog-logstash, slog-graylog...). Apply when using or adopting slog, or when the codebase already imports any github.com/samber/slog-* package."
+description: "Composable slog handlers for Golang with samber/slog-* — fan-out and routing (slog-multi), sampling, attribute formatting and PII redaction, HTTP middleware, and shipping to Datadog, Sentry, Loki, and others. Apply when composing slog handlers or when the codebase imports any `github.com/samber/slog-*` package. For logging strategy with plain log/slog → See `samber/cc-skills-golang@golang-observability` skill."
 user-invocable: true
 license: MIT
 compatibility: Designed for Claude Code, Codex or similar harness, and for projects using Golang.
 metadata:
   author: samber
-  version: "1.1.3"
+  version: "1.1.4"
   openclaw:
     emoji: "🪵"
     homepage: https://github.com/samber/cc-skills-golang

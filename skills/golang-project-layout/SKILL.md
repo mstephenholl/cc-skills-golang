@@ -1,12 +1,12 @@
 ---
 name: golang-project-layout
-description: "Golang project layout and workspace setup — cmd/internal/pkg directory conventions, module and package naming, go.work workspaces, and essential configuration files. Use when starting a new Go project, organizing an existing codebase, setting up a monorepo with multiple packages, creating CLI tools with multiple main packages, or discussing package restructuring, package splits, or module splits. Not for restructuring existing code without a layout change (→ See `samber/cc-skills-golang@golang-refactoring` skill)."
+description: "Golang project layout — cmd/internal/pkg conventions, module and package naming, go.work monorepos, and right-sizing structure to scope. Use when starting a new Go project, reorganizing packages or modules, or setting up a monorepo with several binaries. Not for moving code within an existing layout (→ See `samber/cc-skills-golang@golang-refactoring` skill)."
 user-invocable: true
 license: MIT
 compatibility: Designed for Claude Code, Codex or similar harness, and for projects using Golang.
 metadata:
   author: samber
-  version: "1.4.3"
+  version: "1.4.4"
   openclaw:
     emoji: "📁"
     homepage: https://github.com/samber/cc-skills-golang

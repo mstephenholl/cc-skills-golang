@@ -1,12 +1,12 @@
 ---
 name: golang-documentation
-description: "Comprehensive documentation guide for Golang projects, covering godoc comments, README, CONTRIBUTING, CHANGELOG, Go Playground, Example tests, API docs, and llms.txt. Use when writing or reviewing doc comments, documentation, adding code examples, setting up doc sites, or discussing documentation best practices. Triggers for both libraries and applications/CLIs."
+description: "Golang documentation — godoc comments, Example tests, README, CONTRIBUTING, CHANGELOG, Go Playground links, and llms.txt. Use when writing or reviewing doc comments or project docs for a Go library, application, or CLI. Not for inline comment style (→ See `samber/cc-skills-golang@golang-code-style` skill)."
 user-invocable: true
 license: MIT
 compatibility: Designed for Claude Code, Codex or similar harness, and for projects using Golang.
 metadata:
   author: samber
-  version: "1.3.3"
+  version: "1.3.4"
   openclaw:
     emoji: "📝"
     homepage: https://github.com/samber/cc-skills-golang

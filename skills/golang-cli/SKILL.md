@@ -1,12 +1,12 @@
 ---
 name: golang-cli
-description: "Golang CLI application development. Use when building, modifying, or reviewing a Go CLI tool — especially for command structure, flag handling, configuration layering, version embedding, exit codes, I/O patterns, signal handling, shell completion, argument validation, and CLI unit testing. Also triggers when code uses cobra, viper, or urfave/cli. For cobra-specific APIs → See `samber/cc-skills-golang@golang-spf13-cobra` skill; for viper configuration layering → See `samber/cc-skills-golang@golang-spf13-viper` skill."
+description: "Golang CLI architecture — exit codes, stdout/stderr discipline, signal handling, version embedding, config layering, and CLI testing. Use when building or reviewing a Go command-line tool's structure or its behavior under scripts and pipes, or when the codebase imports urfave/cli. For cobra command APIs → See `samber/cc-skills-golang@golang-spf13-cobra` skill; for viper configuration → See `samber/cc-skills-golang@golang-spf13-viper` skill."
 user-invocable: true
 license: MIT
 compatibility: Designed for Claude Code, Codex or similar harness, and for projects using Golang.
 metadata:
   author: samber
-  version: "1.3.0"
+  version: "1.3.1"
   openclaw:
     emoji: "💻"
     homepage: https://github.com/samber/cc-skills-golang

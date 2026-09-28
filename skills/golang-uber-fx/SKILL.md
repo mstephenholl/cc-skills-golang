@@ -1,12 +1,12 @@
 ---
 name: golang-uber-fx
-description: "Golang application framework using uber-go/fx — fx.New, fx.Provide, fx.Invoke, fx.Module, fx.Lifecycle hooks, fx.Annotate (name/group/As), fx.Decorate, fx.Supply, fx.Replace, fx.WithLogger, and signal-aware Run(). Apply when using or adopting uber-go/fx, when the codebase imports `go.uber.org/fx`, or when wiring services with fx.New. For raw DI without lifecycle, see `samber/cc-skills-golang@golang-uber-dig` skill."
+description: "Golang application framework with uber-go/fx — modules, lifecycle hooks, annotations, decorators, and signal-aware startup and shutdown. Apply when using or adopting uber-go/fx, or when the codebase imports `go.uber.org/fx`. For raw DI without lifecycle → See `samber/cc-skills-golang@golang-uber-dig` skill."
 user-invocable: true
 license: MIT
 compatibility: Designed for Claude Code, Codex or similar harness, and for projects using Golang.
 metadata:
   author: samber
-  version: "1.2.2"
+  version: "1.2.3"
   openclaw:
     emoji: "🏭"
     homepage: https://github.com/samber/cc-skills-golang

@@ -1,12 +1,12 @@
 ---
 name: golang-google-wire
-description: "Compile-time dependency injection in Golang using google/wire — wire.NewSet, wire.Build, wire.Bind (interface→concrete), wire.Struct, wire.Value, wire.InterfaceValue, wire.FieldsOf, cleanup functions, //go:build wireinject injector files, and generated wire_gen.go. Apply when using or adopting google/wire, when the codebase imports `github.com/google/wire`, or when wiring an application graph at compile time via `wire.Build`. For runtime DI with reflection, see `samber/cc-skills-golang@golang-uber-dig` skill."
+description: "Compile-time dependency injection in Golang with google/wire — provider sets, interface bindings, cleanup functions, injector files, and generated wire_gen.go. Apply when using or adopting google/wire, when the codebase imports `github.com/google/wire`, or when wire_gen.go is stale or fails to generate. For runtime DI → See `samber/cc-skills-golang@golang-uber-dig` skill."
 user-invocable: true
 license: MIT
 compatibility: Designed for Claude Code, Codex or similar harness, and for projects using Golang.
 metadata:
   author: samber
-  version: "1.1.2"
+  version: "1.1.3"
   openclaw:
     emoji: "🪡"
     homepage: https://github.com/samber/cc-skills-golang

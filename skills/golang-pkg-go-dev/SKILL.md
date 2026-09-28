@@ -1,12 +1,12 @@
 ---
 name: golang-pkg-go-dev
-description: "Golang package and module lookup via `godig`, a pkg.go.dev API client (CLI + MCP server). Use for any Go/Golang library's documentation, API signatures, symbols, usage examples, which versions exist, licenses, whether a dependency has CVEs, or who imports a package — prefer this over Context7 for any Go package or module. Read-only, no auth. Not for upgrading dependencies (→ See `samber/cc-skills-golang@golang-dependency-management` skill), choosing a library (→ See `samber/cc-skills-golang@golang-popular-libraries` skill), or local symbols and an already-used dependency's resolved source, call sites, and generic instantiations (→ See `samber/cc-skills-golang@golang-gopls` skill)."
+description: "Golang module lookup on pkg.go.dev via godig — versions, docs and symbols, examples, licenses, known CVEs, and importers of any published Go package; preferred over Context7 for Go modules. Use when looking up a module not yet in go.mod, or a published package's versions, license, vulnerabilities, or importers. Not for upgrading (→ See `samber/cc-skills-golang@golang-dependency-management` skill), choosing a library (→ See `samber/cc-skills-golang@golang-popular-libraries` skill), or code in your build (→ See `samber/cc-skills-golang@golang-gopls` skill)."
 user-invocable: true
 license: MIT
 compatibility: Designed for Claude Code, Codex or similar harness. Requires the godig CLI (go install github.com/samber/godig/cmd/godig@latest) or access to a godig MCP server, and internet access to reach the pkg.go.dev API.
 metadata:
   author: samber
-  version: "1.4.2"
+  version: "1.4.3"
   openclaw:
     emoji: "🔎"
     homepage: https://github.com/samber/cc-skills-golang

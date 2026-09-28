@@ -1,12 +1,12 @@
 ---
 name: golang-grpc
-description: "Provides gRPC usage guidelines, protobuf organization, and production-ready patterns for Golang microservices. Use when implementing, reviewing, or debugging gRPC servers/clients, writing proto files, setting up interceptors, handling gRPC errors with status codes, configuring TLS/mTLS, testing with bufconn, or working with streaming RPCs."
+description: "gRPC services in Golang — proto package layout, server and client setup, interceptors, status codes, deadlines, TLS/mTLS, streaming, and bufconn tests. Apply when implementing, reviewing, or debugging Go gRPC servers or clients, or when the codebase imports `google.golang.org/grpc`."
 user-invocable: true
 license: MIT
 compatibility: Designed for Claude Code, Codex or similar harness, and for projects using Golang.
 metadata:
   author: samber
-  version: "1.2.2"
+  version: "1.2.3"
   openclaw:
     emoji: "🌐"
     homepage: https://github.com/samber/cc-skills-golang

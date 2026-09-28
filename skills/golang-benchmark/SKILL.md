@@ -1,12 +1,12 @@
 ---
 name: golang-benchmark
-description: "Golang benchmarking, profiling, and performance measurement. Use when writing, running, or comparing Go benchmarks, profiling hot paths with pprof, interpreting CPU/memory/trace profiles, analyzing results with benchstat, setting up CI benchmark regression detection, or investigating production performance with Prometheus runtime metrics. Also use when the developer needs deep analysis on a specific performance indicator - this skill provides the measurement methodology, while `samber/cc-skills-golang@golang-performance` provides the optimization patterns."
+description: "Golang benchmark measurement and profile interpretation — `testing.B` benchmarks, pprof CPU/memory/trace analysis, benchstat comparisons, and CI regression detection. Use when writing or comparing Go benchmarks, reading a profile, or judging whether a performance change is statistically real. Not for choosing the optimization to apply (→ See `samber/cc-skills-golang@golang-performance` skill)."
 user-invocable: true
 license: MIT
 compatibility: Designed for Claude Code, Codex or similar harness, and for projects using Golang.
 metadata:
   author: samber
-  version: "1.3.2"
+  version: "1.3.3"
   openclaw:
     emoji: "📊"
     homepage: https://github.com/samber/cc-skills-golang

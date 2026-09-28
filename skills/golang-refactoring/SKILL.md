@@ -1,12 +1,12 @@
 ---
 name: golang-refactoring
-description: "Golang refactoring — safe, at-scale restructuring of existing Go code: a coverage-adaptive safety net, behavior-preserving transforms (gopls Rename/Extract, `gofmt -r`, `gopatch`), the Fowler catalog mapped to Go, breaking import cycles, and small stacked PRs. Apply when a function or type has grown too large, a code smell blocks a feature, or the user asks to refactor Go code — also for renaming at scale, extracting functions or interfaces, moving code between packages, or planning a multi-step refactor. Target styles owned elsewhere → See `samber/cc-skills-golang@golang-naming` (renames), `samber/cc-skills-golang@golang-project-layout` (splits), `samber/cc-skills-golang@golang-modernize` (idioms), `samber/cc-skills-golang@golang-code-style` (control flow), `samber/cc-skills-golang@golang-design-patterns` (patterns/DI)."
+description: "Golang refactoring at scale — a coverage-adaptive safety net, behavior-preserving transforms (gopls rename/extract, gofmt -r, gopatch), breaking import cycles, and staged PRs. Use when a Go function, type, or package has outgrown its shape, when planning a multi-step refactor, or when renaming or moving code across packages. For the target shape → See `samber/cc-skills-golang@golang-naming`, `samber/cc-skills-golang@golang-project-layout`, or `samber/cc-skills-golang@golang-design-patterns` skill."
 user-invocable: true
 license: MIT
 compatibility: Designed for Claude Code, Codex or similar harness, and for projects using Golang. Requires gopls and git.
 metadata:
   author: samber
-  version: "1.1.1"
+  version: "1.1.2"
   openclaw:
     emoji: "♻️"
     homepage: https://github.com/samber/cc-skills-golang

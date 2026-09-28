@@ -1,12 +1,12 @@
 ---
 name: golang-stretchr-testify
-description: "Comprehensive guide to stretchr/testify for Golang testing. Covers assert, require, mock, and suite packages in depth. Use when writing tests with testify, creating mocks, setting up test suites, or choosing between assert and require. Covers testify assertions, mock expectations, argument matchers, call verification, suite lifecycle, and advanced patterns like Eventually, JSONEq, and custom matchers. Apply when the codebase imports github.com/stretchr/testify."
+description: "Golang testing with stretchr/testify — assert vs require, mocks and argument matchers, suites, and Eventually/JSONEq-style assertions. Apply when writing tests with testify, or when the codebase imports `github.com/stretchr/testify`. For general Go testing patterns → See `samber/cc-skills-golang@golang-testing` skill."
 user-invocable: true
 license: MIT
 compatibility: Designed for Claude Code, Codex or similar harness, and for projects using Golang.
 metadata:
   author: samber
-  version: "1.3.2"
+  version: "1.3.3"
   openclaw:
     emoji: "✅"
     homepage: https://github.com/samber/cc-skills-golang

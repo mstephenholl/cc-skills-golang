@@ -1,12 +1,12 @@
 ---
 name: golang-spf13-viper
-description: "Golang configuration library using spf13/viper — layered precedence (flag > env > file > KV > default), BindPFlag/BindPFlags, SetEnvPrefix + SetEnvKeyReplacer + AutomaticEnv, ReadInConfig + ConfigFileNotFoundError, Unmarshal + mapstructure struct tags, Sub for sub-trees, WatchConfig + OnConfigChange for hot reload, viper.New() for test isolation, and remote KV integration. Apply when using or adopting spf13/viper, or when the codebase imports `github.com/spf13/viper`. For CLI command structure alongside viper, see the `samber/cc-skills-golang@golang-spf13-cobra` skill. For general CLI architecture, see `samber/cc-skills-golang@golang-cli`."
+description: "Golang layered configuration with spf13/viper — flag and env binding, config files, unmarshaling into structs, hot reload, and test isolation. Apply when using or adopting spf13/viper, or when the codebase imports `github.com/spf13/viper`. For command structure → See `samber/cc-skills-golang@golang-spf13-cobra` skill; for CLI architecture → See `samber/cc-skills-golang@golang-cli` skill."
 user-invocable: true
 license: MIT
 compatibility: Designed for Claude Code, Codex or similar harness, and for projects using Golang.
 metadata:
   author: samber
-  version: "1.1.2"
+  version: "1.1.3"
   openclaw:
     emoji: "🔧"
     homepage: https://github.com/samber/cc-skills-golang

@@ -1,12 +1,12 @@
 ---
 name: golang-data-structures
-description: "Golang data structures — slices (internals, capacity growth, preallocation, slices package), maps (Swiss-table internals, maps package), arrays, container/list/heap/ring, strings.Builder vs bytes.Buffer, generic collections, pointers (unsafe.Pointer, weak.Pointer), and copy semantics. Use when choosing or optimizing Go data structures, implementing generic containers, using container/ packages, unsafe or weak pointers, or questioning slice/map internals. Not for applying optimization patterns once profiling has identified a bottleneck (→ See `samber/cc-skills-golang@golang-performance` skill)."
+description: "Golang data structure choice and internals — slice capacity and aliasing, map growth (Swiss tables), container/list/heap/ring, generic containers, strings.Builder vs bytes.Buffer, and unsafe/weak pointers. Use when choosing between collection types, writing a generic container, or reasoning about slice or map memory. Not for applying optimization patterns after profiling (→ See `samber/cc-skills-golang@golang-performance` skill)."
 user-invocable: true
 license: MIT
 compatibility: Designed for Claude Code, Codex or similar harness, and for projects using Golang.
 metadata:
   author: samber
-  version: "1.2.3"
+  version: "1.2.4"
   openclaw:
     emoji: "🗃"
     homepage: https://github.com/samber/cc-skills-golang

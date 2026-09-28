@@ -1,12 +1,12 @@
 ---
 name: golang-swagger
-description: "Golang OpenAPI/Swagger documentation with swaggo/swag — annotation comments (@Summary, @Param, @Success, @Router, @Security), swag init code generation, framework integrations (gin, echo, fiber, chi, net/http), security definitions (Bearer/JWT, OAuth2, API key), and struct tags (swaggertype, enums, example, swaggerignore). Apply when adding or maintaining Swagger/OpenAPI docs in a Go project, or when the codebase imports github.com/swaggo/swag, github.com/swaggo/gin-swagger, github.com/swaggo/echo-swagger, github.com/swaggo/http-swagger, or github.com/swaggo/files."
+description: "OpenAPI/Swagger docs for Golang with swaggo/swag — annotation comments, swag init, framework integrations, security definitions, and struct tags. Apply when adding or maintaining Swagger docs in a Go API, or when the codebase imports `github.com/swaggo/swag` or a swaggo framework adapter."
 user-invocable: true
 license: MIT
 compatibility: Designed for Claude Code, Codex or similar harness. Requires go and swag CLI.
 metadata:
   author: samber
-  version: "1.1.2"
+  version: "1.1.3"
   openclaw:
     emoji: "📋"
     homepage: https://github.com/samber/cc-skills-golang

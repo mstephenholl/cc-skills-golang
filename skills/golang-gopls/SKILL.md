@@ -1,12 +1,12 @@
 ---
 name: golang-gopls
-description: "Golang semantic code intelligence via `gopls`, the official Go language server — go-to-definition, find references, call/implementation hierarchy, workspace symbol search, package API discovery, diagnostics, safe rename, refactors (extract/inline/fill/rewrite code actions), formatting, and generated tests. Reaches an agent via gopls's own MCP server (`go_*` tools), Claude Code's native `LSP` tool, or the `gopls` CLI. Use when navigating or refactoring Go code — jumping to a definition, finding call sites before a rename, understanding a file's or package's dependencies, running diagnostics after an edit, or extracting/inlining/renaming. Not for the published ecosystem — packages not in your `go.mod`, versions, licenses, importers — → See `samber/cc-skills-golang@golang-pkg-go-dev` skill (`godig`). Not for a whole-tree vulnerability audit → See `samber/cc-skills-golang@golang-security` skill (`govulncheck`)."
+description: "Golang semantic code navigation and refactoring with gopls — definitions, references, call and implementation hierarchy, symbol search, diagnostics, safe rename, and extract/inline. Use when locating code, finding call sites before a change, checking diagnostics after an edit, or renaming and extracting safely. Not for packages outside your go.mod (→ See `samber/cc-skills-golang@golang-pkg-go-dev` skill) or a whole-tree vulnerability audit (→ See `samber/cc-skills-golang@golang-security` skill)."
 user-invocable: true
 license: MIT
 compatibility: Designed for Claude Code, Codex or similar harness. Requires the gopls binary (go install golang.org/x/tools/gopls@latest) v0.20+ on PATH.
 metadata:
   author: samber
-  version: "1.1.3"
+  version: "1.1.4"
   openclaw:
     emoji: "🛰️"
     homepage: https://github.com/samber/cc-skills-golang
