@@ -200,7 +200,7 @@ These skills are designed as **atomic, cross-referencing units**. A skill may re
 | ⭐️ | ✅ `golang-data-structures` | ⚡ | -39% | 92 | 1,754 | 6,118 |
 | ⭐️ | ✅ `golang-database` | ⚡ ⚙️ | -38% | 80 | 1,785 | 6,611 |
 | ⭐️ | ✅ `golang-design-patterns` | ⚡ ⚙️ | -37% | 118 | 1,842 | 9,341 |
-| ⭐️ | ✅ `golang-documentation` | ⚡ 🤖 ⚙️ | -53% | 76 | 1,585 | 10,376 |
+| ⭐️ | ✅ `golang-documentation` | ⚡ 🤖 ⚙️ | -53% | 76 | 1,760 | 10,551 |
 | ⭐️ | ✅ `golang-error-handling` | ⚡ 🤖 ⚙️ | -26% | 116 | 1,429 | 4,844 |
 | ⭐️ | ✅ `golang-how-to` | ⚡ | — | 104 | 2,650 | 16,666 |
 | ⭐️ | ✅ `golang-modernize` | ⚡ 🤖 | -43% | 104 | 2,782 | 14,946 |
@@ -235,14 +235,14 @@ These skills are designed as **atomic, cross-referencing units**. A skill may re
 | ✅ `golang-graphql` |  | -16% | 78 | 2,989 | 8,305 |
 | ✅ `golang-grpc` | ⚡ | -41% | 68 | 2,090 | 5,214 |
 | ✅ `golang-spf13-cobra` | ⚡ | — | 118 | 1,876 | 7,675 |
-| ✅ `golang-spf13-viper` | ⚡ | — | 105 | 2,334 | 8,379 |
+| ✅ `golang-spf13-viper` | ⚡ | — | 105 | 2,334 | 8,432 |
 | ✅ `golang-swagger` | ⚡ | — | 67 | 2,272 | 3,561 |
 | ✅ `golang-uber-dig` | ⚡ | -10% | 84 | 1,945 | 5,972 |
 | ✅ `golang-uber-fx` | ⚡ | -5% | 78 | 2,307 | 6,987 |
 | ✅ `golang-samber-do` | ⚡ | -81% | 72 | 1,722 | 3,787 |
 | ✅ `golang-samber-hot` | ⚡ | -54% | 101 | 1,986 | 7,940 |
 | ✅ `golang-samber-lo` | ⚡ | -40% | 96 | 1,886 | 10,458 |
-| ✅ `golang-samber-mo` | ⚡ | -48% | 100 | 1,964 | 12,043 |
+| ✅ `golang-samber-mo` | ⚡ | -48% | 100 | 2,126 | 12,205 |
 | ✅ `golang-samber-oops` | ⚡ | -59% | 70 | 1,499 | 3,563 |
 | ✅ `golang-samber-ro` | ⚡ | -50% | 104 | 1,921 | 11,135 |
 | ✅ `golang-samber-slog` | ⚡ | -19% | 104 | 2,991 | 10,497 |

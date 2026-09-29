@@ -69,6 +69,8 @@ viper.AllowEmptyEnv(true)
 // now MYAPP_PORT="" → viper.GetInt("port") == 0, not the default
 ```
 
+Use `AllowEmptyEnv`, not an `os.LookupEnv` + `viper.Set` workaround — `Set` writes to the override register, which sits above flags in viper's precedence, so the workaround would also silently beat an explicit `--flag`.
+
 ## Flag binding
 
 Bind a pflag after defining it:

@@ -6,7 +6,7 @@ license: MIT
 compatibility: Designed for Claude Code, Codex or similar harness, and for projects using Golang.
 metadata:
   author: samber
-  version: "1.3.6"
+  version: "1.3.7"
   openclaw:
     emoji: "📝"
     homepage: https://github.com/samber/cc-skills-golang
@@ -25,7 +25,7 @@ paths:
 
 **Modes:**
 
-- **Write mode** — produce the documentation the user asked for. Compare the project against the [checklist](#documentation-checklist) and list the missing items in your reply without generating them unasked. Done when the requested docs exist and follow the Writing Principles.
+- **Write mode** — produce the documentation the user asked for, plus the files it depends on — a CONTRIBUTING that says `make test` or `docker compose up` ships the `Makefile` and `docker-compose.yml` that make those commands work. Compare the project against the [checklist](#documentation-checklist) and list other missing items in your reply without generating them unasked. Done when the requested docs exist and follow the Writing Principles.
 - **Review mode** — the deliverable is per-file findings: file:line, what is missing or wrong, and a suggested rewrite; if the user asked for fixes, apply them. Parallelize by package only when many packages lack docs.
 
 > **Community default.** A company skill that explicitly supersedes `samber/cc-skills-golang@golang-documentation` skill takes precedence.
@@ -60,6 +60,8 @@ Apply to every piece of documentation you write or review:
 - **Document every exported identifier**, plus complex internal functions; skip test functions — their names are the documentation.
 - **Start with the identifier's name and a verb phrase**, then cover why it exists, when to use it, its constraints (including concurrency safety), and the errors it returns.
 - **Include parameters, return values, error cases, and a usage example for exported functions** — the doc comment is the API's only contract on pkg.go.dev; keep each section to what the signature doesn't already say.
+- **In a public library, put a `// Play: https://go.dev/play/p/<id>` line in the delivered comment**, just before the example — readers run it from pkg.go.dev; when you can't create the playground yourself, write the line with a placeholder ID and flag it for replacement rather than moving it to your notes.
+- **Deprecate with a `Deprecated:` paragraph that names the replacement and the version that removes the old API** (`Deprecated: Use ParseDurationStrict instead. ParseDuration will be removed in v2.`) — tools and pkg.go.dev key on the exact marker, and the removal version tells callers how long they have.
 
 Read [references/code-comments.md](./references/code-comments.md) when writing or reviewing a doc comment, package comment, file-level description, `Deprecated:` marker or `// Play:` link.
 

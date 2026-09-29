@@ -6,7 +6,7 @@ license: MIT
 compatibility: Designed for Claude Code, Codex or similar harness, and for projects using Golang.
 metadata:
   author: samber
-  version: "1.1.5"
+  version: "1.1.6"
   openclaw:
     emoji: "🎭"
     homepage: https://github.com/samber/cc-skills-golang
@@ -53,6 +53,7 @@ go get github.com/samber/mo
 | `Task[T]` / `IO[T]` | A deferred async / sync side effect | Lazy — runs only on `Run()`; `Task.Run()` returns a `*Future[T]` |
 | `State[S, A]` | A computation that threads state (parser position) | `Run(initial)` returns `(result, newState)` |
 
+- **Compose `IO`/`IOEither` by wrapping them** — they have no `Map`/`FlatMap`, so build a larger program as a new `mo.NewIOEither(func() (R, error) { … })` whose function runs the smaller ones; the composed value stays lazy, so constructing it performs no I/O and tests can build it with stubbed effects.
 - **Reach for mo when steps chain** — for a single fallible call with no follow-up, plain `if err != nil` is clearer than a `Result`.
 - **Use `Option` only when absence carries meaning** — a `count` where `0` means "no items" stays `int`; a `nickname` where "not set" differs from `""` becomes `Option[string]`.
 - **Keep `(T, error)` in exported signatures** — convert with `mo.TupleToResult(f())` on entry and `.Get()` on exit, so callers never need mo to call your API.
@@ -84,6 +85,7 @@ parsed := result.Pipe2(
 | Mistake | Why it fails | Fix |
 | --- | --- | --- |
 | `mo.TupleToOption(m[key])` | Inside a call argument a map index yields one value, so it does not compile | `v, ok := m[key]; opt := mo.TupleToOption(v, ok)` |
+| `if s == "" { return mo.None[string]() }` to build an Option | Hand-rolls what the library already does | `mo.EmptyableToOption(s)` — None for any type's zero value (`""`, `0`, nil); it checks via reflection, so on a hot path use `mo.TupleToOption(s, s != "")`, still without an `if` |
 | `json:"x,omitempty"` on an `Option` field | `omitempty` ignores struct types; `None` still marshals as `null` | `omitzero` (Go 1.24+), which uses `Option.IsZero` |
 | `mo.Try` around a call that can panic | `Try` only converts the returned error; the panic propagates | Call it inside `mo.Do`, which recovers panics into `Err` |
 | Two structs (DB row and JSON response) for nullable columns | `Option` implements `sql.Scanner`, `driver.Valuer` and `json.Marshaler`/`Unmarshaler` | One struct with `mo.Option[T]` fields |
